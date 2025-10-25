@@ -1,0 +1,8 @@
+[game.ReplicatedStorage]
+$path = "src/shared"
+
+[game.ServerScriptService]
+$path = "src/server"
+
+[game.StarterPlayer.StarterPlayerScripts]
+$path = "src/client"

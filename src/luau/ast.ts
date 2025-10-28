@@ -1,0 +1,259 @@
+export namespace Luau {
+	export interface Document {
+		root: Statement;
+		commentLocations: Comment[];
+	}
+
+	export interface Comment {
+		type: "Comment" | "BlockComment";
+		location: Location;
+	}
+
+	export type Location = `${number},${number} - ${number},${number}`;
+
+	export type Statement =
+		| BlockStatement
+		| LocalStatement
+		| IfStatement
+		| LocalFunctionStatement
+		| ForInStatement
+		| ForStatement
+		| ExpressionStatement
+		| AssignStatement
+		| ContinueStatement
+		| WhileStatement
+		| ReturnStatement
+		| FunctionStatement;
+
+	export type Expression =
+		| IndexNameExpression
+		| GlobalExpression
+		| CallExpression
+		| FunctionExpression
+		| LocalExpression
+		| TableExpression
+		| UnaryExpression
+		| IndexExpressionExpression
+		| BinaryExpression
+		| ConstantStringExpression
+		| ConstantBooleanExpression
+		| ConstantNilExpression
+		| ConstantNumberExpression
+		| VarargsExpression;
+
+	export interface BlockStatement {
+		type: "AstStatBlock";
+		location: Location;
+		hasEnd: boolean;
+		body: Statement[];
+	}
+
+	export interface LocalStatement {
+		type: "AstStatLocal";
+		location: Location;
+		vars: Local[];
+		values: Expression[];
+	}
+
+	export interface Local {
+		type: "AstLocal";
+		name: string;
+		location: Location;
+		luauType?: Type | null;
+	}
+
+	export interface IndexNameExpression {
+		type: "AstExprIndexName";
+		location: Location;
+		index: string;
+		indexLocation: Location;
+		op: "." | ":";
+		expr: Expression;
+	}
+
+	export interface GlobalExpression {
+		type: "AstExprGlobal";
+		location: Location;
+		global: string;
+	}
+
+	export interface CallExpression {
+		type: "AstExprCall";
+		location: Location;
+		self: boolean;
+		argLocation: Location;
+		func: Expression;
+		args: Expression[];
+	}
+
+	export interface FunctionExpression {
+		type: "AstExprFunction";
+		location: Location;
+		self?: Local;
+		attributes: unknown[];
+		generics: unknown[];
+		genericPacks: unknown[];
+		args: unknown[];
+		vararg: boolean;
+		varargLocation: Location;
+		varargAnnotation?: Type;
+		functionDepth: number;
+		debugname: string;
+		body: BlockStatement;
+	}
+
+	export interface IfStatement {
+		type: "AstStatIf";
+		location: Location;
+		hasThen: boolean;
+		condition: Expression;
+		thenbody: BlockStatement;
+		elsebody?: BlockStatement;
+	}
+
+	export interface LocalExpression {
+		type: "AstExprLocal";
+		location: Location;
+		local: Local;
+	}
+
+	export interface LocalFunctionStatement {
+		type: "AstStatLocalFunction";
+		location: Location;
+		name: Local;
+		func: FunctionExpression;
+	}
+
+	export interface TableExpression {
+		type: "AstExprTable";
+		location: Location;
+		items: TableItem[];
+	}
+	export interface ForInStatement {
+		type: "AstStatForIn";
+		location: Location;
+		hasIn: boolean;
+		hasDo: boolean;
+		vars: Local[];
+		values: Expression[];
+		body: BlockStatement;
+	}
+	export interface ForStatement {
+		type: "AstStatFor";
+		location: Location;
+		var: Local;
+		from: Expression;
+		to: Expression;
+		body: BlockStatement;
+		hasDo: boolean;
+	}
+
+	export interface UnaryExpression {
+		type: "AstExprUnary";
+		location: Location;
+		op: "Not";
+		expr: Expression;
+	}
+
+	export interface TableItem {}
+
+	export interface ExpressionStatement {
+		type: "AstStatExpr";
+		location: Location;
+		expr: Expression;
+	}
+
+	export interface IndexExpressionExpression {
+		type: "AstExprIndexExpr";
+		location: Location;
+		expr: Expression;
+		index: Expression;
+	}
+
+	export interface AssignStatement {
+		type: "AstStatAssign";
+		location: Location;
+		vars: Expression[];
+		values: Expression[];
+	}
+
+	export interface BinaryExpression {
+		type: "AstExprBinary";
+		location: Location;
+		op: "CompareEq" | "CompareNe" | "Or" | "And" | "Concat";
+		left: Expression;
+		right: Expression;
+	}
+
+	export interface ContinueStatement {
+		type: "AstStatContinue";
+		location: Location;
+	}
+
+	export interface WhileStatement {
+		type: "AstStatWhile";
+		location: Location;
+		hasDo: boolean;
+		condition: Expression;
+		body: BlockStatement;
+	}
+
+	export interface ConstantStringExpression {
+		type: "AstExprConstantString";
+		value: string;
+		location: Location;
+	}
+
+	export interface ConstantBooleanExpression {
+		type: "AstExprConstantBool";
+		value: boolean;
+		location: Location;
+	}
+
+	export interface ConstantNumberExpression {
+		type: "AstExprConstantNumber";
+		value: number;
+		location: Location;
+	}
+
+	export interface ConstantNilExpression {
+		type: "AstExprConstantNil";
+		location: Location;
+	}
+
+	export interface ReturnStatement {
+		type: "AstStatReturn";
+		location: Location;
+		list: Expression[];
+	}
+
+	export interface FunctionStatement {
+		type: "AstStatFunction";
+		location: Location;
+		name: Expression;
+		func: FunctionExpression;
+	}
+
+	export interface VarargsExpression {
+		type: "AstExprVarargs";
+		location: Location;
+	}
+
+	export type Type = PackVariadicType | ReferenceType;
+
+	export interface PackVariadicType {
+		type: "AstTypePackVariadic";
+		location: Location;
+		variadicType: Type;
+	}
+
+	export interface ReferenceType {
+		type: "AstTypeReference";
+		location: Location;
+		name: string;
+		nameLocation: Location;
+		parameters: Type[];
+	}
+
+	export type Node = Expression | Statement | Type;
+}

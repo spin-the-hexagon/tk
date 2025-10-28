@@ -1,4 +1,4 @@
-import { queue, schedulePromise, waitForEventLoop } from "./scheduler";
+import { schedulePromise, type SchedulerPhase } from "./scheduler";
 
 export interface Signal<T> {
 	valueInternal: Promise<T>;
@@ -46,6 +46,7 @@ export interface SignalGetter {
 
 export function derived<Output>(
 	name: string,
+	phase: SchedulerPhase,
 	evaluate: (getter: SignalGetter) => Output | Promise<Output>,
 ): Signal<Output> {
 	let hooks: DirtyHook[] = [];
@@ -80,17 +81,21 @@ export function derived<Output>(
 	};
 
 	function update() {
-		const evaluator = schedulePromise(name, "build", async () => {
-			return await evaluate(async (sig) => {
-				if (dependencies.some(([_, s]) => s === sig))
+		const evaluator = schedulePromise({
+			name,
+			phase,
+			impl: async () => {
+				return await evaluate(async (sig) => {
+					if (dependencies.some(([_, s]) => s === sig))
+						return sig.valueInternal;
+
+					const hook = sig.hook(signal.markDirty);
+
+					dependencies.push([hook, sig]);
+
 					return sig.valueInternal;
-
-				const hook = sig.hook(signal.markDirty);
-
-				dependencies.push([hook, sig]);
-
-				return sig.valueInternal;
-			});
+				});
+			},
 		});
 
 		value = Promise.resolve(evaluator);

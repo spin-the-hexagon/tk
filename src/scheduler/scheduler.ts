@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { unreachable } from "../utils/unreachable";
 import { getTerminalWidth } from "../utils/get-width";
+import { unreachable } from "../utils/unreachable";
 
 export interface SchedulerBlock {
 	tasks: SchedulerTask[];
@@ -38,13 +38,19 @@ export interface SchedulerTask {
 	done: boolean;
 }
 
-export type SchedulerPhase = "build" | "commit";
+export type SchedulerPhase = "index" | "parse" | "mark" | "build" | "commit";
 
 export function getSchedulerPhaseOrdinal(s: SchedulerPhase): number {
-	if (s === "build") {
+	if (s === "index") {
 		return 0;
-	} else if (s === "commit") {
+	} else if (s === "parse") {
 		return 1;
+	} else if (s === "mark") {
+		return 2;
+	} else if (s === "build") {
+		return 3;
+	} else if (s === "commit") {
+		return 4;
 	}
 
 	unreachable(s);
@@ -55,6 +61,12 @@ export function getSchedulerPhaseText(s: SchedulerPhase): string {
 		return chalk.blue("build");
 	} else if (s === "commit") {
 		return chalk.green("commit");
+	} else if (s === "mark") {
+		return chalk.magenta("mark");
+	} else if (s === "index") {
+		return chalk.yellow("index");
+	} else if (s === "parse") {
+		return chalk.red("parse");
 	}
 
 	unreachable(s);
@@ -62,7 +74,7 @@ export function getSchedulerPhaseText(s: SchedulerPhase): string {
 
 export function block(): SchedulerBlock {
 	return {
-		begun: Date.now(),
+		begun: performance.now(),
 		tasks: [],
 		async process() {
 			let lastUpdateTime = 0;
@@ -78,8 +90,11 @@ export function block(): SchedulerBlock {
 
 				if (tasks.length === 0) break;
 
+				let minPhase = tasks[0]!.phase;
+
 				for (const task of tasks) {
 					if (task.hasBegun) continue;
+					if (task.phase !== minPhase) continue;
 
 					const result = task.exec();
 
@@ -91,7 +106,7 @@ export function block(): SchedulerBlock {
 					break;
 				}
 
-				const now = Date.now();
+				const now = performance.now();
 
 				if (now > lastUpdateTime + 10) {
 					showSchedulerBlockState(this);
@@ -102,6 +117,7 @@ export function block(): SchedulerBlock {
 			}
 			this.done = true;
 			showBlockCompletedLine(this);
+			scheduler.currentBlock = block();
 		},
 		done: false,
 		add(task) {
@@ -111,6 +127,16 @@ export function block(): SchedulerBlock {
 			}
 		},
 	};
+}
+
+export async function startRunLoop() {
+	while (true) {
+		await waitForEventLoop();
+		const block = getCurrentBlock();
+		if (block.tasks.length > 0) {
+			block.process();
+		}
+	}
 }
 
 export function showSchedulerBlockState(block: SchedulerBlock) {
@@ -124,15 +150,15 @@ export function showSchedulerBlockState(block: SchedulerBlock) {
 				getSchedulerPhaseOrdinal(a.phase) -
 				getSchedulerPhaseOrdinal(b.phase),
 		)[0];
-	let leftStr = `${chalk.magenta(completedTasks)}/${totalTasks}`;
+	let rightStr = `${chalk.magenta(completedTasks)}/${totalTasks}`;
 
-	if (task) {
-		leftStr += ` (${task.name})`;
-	}
+	// if (task) {
+	// 	rightStr += ` (${task.name})`;
+	// }
 
 	const phase = task?.phase ?? "build";
 
-	const rightStr = getSchedulerPhaseText(phase);
+	const leftStr = getSchedulerPhaseText(phase);
 
 	let text = "";
 
@@ -171,7 +197,7 @@ export function showBlockCompletedLine(block: SchedulerBlock) {
 	text += `Executed `;
 	text += chalk.magenta(block.tasks.length);
 	text += ` tasks in `;
-	text += chalk.cyan(Date.now() - block.begun);
+	text += chalk.cyan(Math.round(performance.now() - block.begun));
 	text += `ms`;
 
 	const width = getTerminalWidth();
@@ -199,11 +225,15 @@ export function beginNewBlock() {
 	scheduler.currentBlock = block();
 }
 
-export function schedulePromise<T>(
-	name: string,
-	phase: SchedulerPhase,
-	getValue: () => Promise<T>,
-): Promise<T> {
+export function schedulePromise<T>({
+	name,
+	phase,
+	impl,
+}: {
+	name: string;
+	phase: SchedulerPhase;
+	impl: () => Promise<T>;
+}): Promise<T> {
 	const { promise, resolve, reject } = Promise.withResolvers<T>();
 
 	queue({
@@ -211,7 +241,7 @@ export function schedulePromise<T>(
 		phase,
 		exec: async () => {
 			try {
-				resolve(await getValue());
+				resolve(await impl());
 			} catch (err) {
 				reject(err);
 			}

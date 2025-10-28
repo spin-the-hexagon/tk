@@ -1,8 +1,14 @@
-[game.ReplicatedStorage]
-$path = "src/shared"
+name = "example"
+version = 0
 
-[game.ServerScriptService]
-$path = "src/server"
+[[portals]]
+project = "./src/shared"
+roblox = "game.ReplicatedStorage.src"
 
-[game.StarterPlayer.StarterPlayerScripts]
-$path = "src/client"
+[[portals]]
+project = "./src/client"
+roblox = "game.StarterPlayer.StarterPlayerScripts.src"
+
+[[portals]]
+project = "./src/server"
+roblox = "game.ServerScriptService.src"

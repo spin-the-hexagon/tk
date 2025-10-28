@@ -5,7 +5,8 @@
 	"private": true,
 	"devDependencies": {
 		"@types/bun": "latest",
-		"prettier": "^3.6.2"
+		"prettier": "^3.6.2",
+		"prettier-plugin-organize-imports": "^4.3.0"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
@@ -15,7 +16,14 @@
 		"fmt": "prettier . -w"
 	},
 	"dependencies": {
+		"@polychromatist/tree-sitter-luau": "^0.2.1",
+		"@types/adm-zip": "^0.5.7",
+		"adm-zip": "^0.5.16",
 		"chalk": "^5.6.2",
+		"chokidar": "^4.0.3",
+		"cmd-ts": "^0.14.3",
+		"ebnf": "^1.9.1",
+		"smol-toml": "^1.4.2",
 		"valibot": "^1.1.0"
 	}
 }

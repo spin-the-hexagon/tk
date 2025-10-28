@@ -1,3 +1,3 @@
-export function unreachable(_value: never): never {
-	throw new Error("UNREACHABLE");
+export function unreachable(ty: never): never {
+	throw new Error(`UNREACHABLE: ${ty}`);
 }

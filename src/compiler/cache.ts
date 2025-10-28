@@ -20,7 +20,6 @@ export class Cache {
 
 	constructor(path: string) {
 		this.path = path;
-		this.loadFromFS();
 		this.startSaveLoop();
 	}
 

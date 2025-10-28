@@ -1,4 +1,8 @@
+import * as v from "valibot";
+import type { Cache } from "../compiler/cache";
 import type { Luau } from "./ast";
+import { parseLuauDocument } from "./parser";
+import { walk } from "./walker";
 
 export type LuauAnalysisType =
 	| {
@@ -57,4 +61,66 @@ export function evaluateExpressionType(
 	}
 
 	return { type: "unknown" };
+}
+
+const ImportInfoSchema = v.object({
+	path: v.array(v.string()),
+	origin: v.union([v.literal("script"), v.literal("game")]),
+	location: v.string() as v.BaseSchema<Luau.Location, Luau.Location, any>,
+});
+
+export type ImportInfo = v.InferOutput<typeof ImportInfoSchema>;
+
+async function _analyzeImports(
+	source: string,
+	cache: Cache,
+): Promise<ImportInfo[]> {
+	const ast = await parseLuauDocument(source, cache);
+	const imports: ImportInfo[] = [];
+
+	await walk(ast.root, {
+		async enter(node: Luau.Node) {
+			if (node.type === "AstExprCall") {
+				const returnType = evaluateExpressionType(node);
+
+				if (returnType.type === "imported_module") {
+					imports.push({
+						path: returnType.path,
+						origin: returnType.origin,
+						location: node.location,
+					});
+				}
+			}
+		},
+	});
+
+	return imports;
+}
+
+export async function analyzeImports(
+	source: string,
+	cache: Cache,
+): Promise<ImportInfo[]> {
+	const hash = Bun.hash(source).toString(36);
+	const cacheHit = cache.query(
+		v.object({
+			type: v.literal("luau:analyze_imports"),
+			hash: v.literal(hash),
+			imports: v.array(ImportInfoSchema),
+		}),
+	);
+
+	if (cacheHit) {
+		return cacheHit.imports;
+	}
+
+	const result = await _analyzeImports(source, cache);
+
+	cache.save({
+		type: "luau:analyze_imports",
+		hash,
+		imports: result,
+	});
+
+	return result;
 }

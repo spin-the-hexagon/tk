@@ -1,5 +1,7 @@
+import * as v from "valibot";
 import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
+import { schedulePromise } from "../scheduler/scheduler";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
@@ -7,7 +9,7 @@ import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 import { integrateLuauPrinter } from "./printer";
 
-export async function transpileToTKPack({
+async function _transpileToTKPack({
 	src,
 	cache,
 	pathDM,
@@ -73,4 +75,44 @@ export async function transpileToTKPack({
 	printer.printNode(parsed.root);
 
 	return printer.text;
+}
+
+export async function transpileToTKPack({
+	src,
+	cache,
+	pathDM,
+}: {
+	src: string;
+	cache: Cache;
+	pathDM: string[];
+}): Promise<string> {
+	const hash = Bun.hash(src).toString(36);
+
+	const cacheHit = cache.query(
+		v.object({
+			type: v.literal("tkpack:transpile"),
+			src: v.literal(hash),
+			transpiled: v.string(),
+			dataModelPath: v.custom((x) => Bun.deepEquals(x, pathDM)),
+		}),
+	);
+
+	if (cacheHit) {
+		return cacheHit.transpiled as string;
+	}
+
+	return schedulePromise({
+		name: `Transpile module ${pathDM.join(".")}`,
+		phase: "parse",
+		async impl() {
+			const transpiled = await _transpileToTKPack({ src, cache, pathDM });
+			cache.save({
+				type: "tkpack:transpile",
+				src: hash,
+				transpiled,
+				dataModelPath: pathDM,
+			});
+			return transpiled;
+		},
+	});
 }

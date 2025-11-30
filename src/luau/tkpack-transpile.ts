@@ -1,4 +1,3 @@
-import { debug } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
@@ -17,8 +16,6 @@ export async function transpileToTKPack({
 	pathDM: string[];
 }): Promise<string> {
 	const parsed = await parseLuauDocument(src, cache);
-
-	debug(parsed);
 
 	await walk(parsed, {
 		async enter(node, parent) {

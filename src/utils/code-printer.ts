@@ -3,10 +3,10 @@ import { unreachable } from "./unreachable";
 export type TextSegment =
 	| string
 	| {
-		type: "location";
-		line: number;
-		col: number;
-	};
+			type: "location";
+			line: number;
+			col: number;
+	  };
 
 export function isAlphanumeric(char: string) {
 	return (
@@ -50,7 +50,7 @@ export class CodePrinter {
 				[
 					...this.segments
 						.filter((x) => typeof x === "string")
-						.join("")
+						.join(""),
 				].at(-1)!,
 			)
 		) {

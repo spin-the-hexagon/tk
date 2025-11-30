@@ -9,7 +9,7 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 		AstExprCall: printer("@func", "(", "comma:args", ")"),
 		AstExprFunction: {
 			print(cp, node) {
-				printer("function", "(", "comma:args", ")", "@body")
+				printer("function", "(", "comma:args", ")", "@body");
 				cp.push("function");
 				cp.push("(");
 				let comma = false;
@@ -20,11 +20,11 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 				}
 				if (node.vararg) {
 					if (comma) cp.push(",");
-					cp.push("...")
+					cp.push("...");
 				}
 				cp.push(")");
 				cp.printNode(node.body);
-			}
+			},
 		},
 		AstExprLocal: printer("@local"),
 		AstExprTable: printer("{", "comma:items", "}"),

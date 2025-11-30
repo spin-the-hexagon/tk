@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { debug } from "../cli/logger";
 import type { Config } from "../config/schema";
 import { analyzeImports } from "../luau/analysis";
 import { createLuauPlugin } from "../luau/plugin";
@@ -86,8 +85,6 @@ export class DevServer {
 			await bundle.sweep();
 
 			const code = await bundle.generateText();
-
-			debug(code);
 		}
 
 		await analyzeImports(src, this.cache);

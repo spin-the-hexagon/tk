@@ -1,6 +1,5 @@
 import { $ } from "bun";
 import * as v from "valibot";
-import { debug } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import { schedulePromise } from "../scheduler/scheduler";
 import type { Luau } from "./ast";
@@ -20,8 +19,6 @@ async function _parseLuauDocument(
 }
 
 export async function parseLuauDocument(source: string, cache: Cache) {
-	debug(source);
-
 	const hash = Bun.hash(source).toString(36);
 
 	const cacheHit = cache.query(

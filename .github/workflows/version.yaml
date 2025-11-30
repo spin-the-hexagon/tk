@@ -19,6 +19,9 @@ jobs:
               with:
                   bun-version: latest
 
+            - name: Install
+              run: bun install
+              
             - name: Create Release Pull Request
               id: changesets
               uses: changesets/action@v1

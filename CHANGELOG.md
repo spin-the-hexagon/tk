@@ -1,5 +1,11 @@
 # @spin-the-hexagon/tk
 
+## 0.0.3
+
+### Patch Changes
+
+- make things work with rokit
+
 ## 0.0.2
 
 ### Patch Changes

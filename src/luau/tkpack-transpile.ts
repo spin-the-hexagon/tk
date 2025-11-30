@@ -1,10 +1,11 @@
+import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
+import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 import { integrateLuauPrinter } from "./printer";
-import { walk } from "./walker";
 
 export async function transpileToTKPack({
 	src,
@@ -17,9 +18,11 @@ export async function transpileToTKPack({
 }): Promise<string> {
 	const parsed = await parseLuauDocument(src, cache);
 
-	await walk(parsed, {
-		async enter(node, parent) {
-			if (node.type === "AstExprCall") {
+	walk(
+		parsed.root as Luau.Node,
+		{},
+		{
+			AstExprCall(node) {
 				const returnType = evaluateExpressionType(node);
 				let path = [...pathDM];
 
@@ -59,9 +62,9 @@ export async function transpileToTKPack({
 						},
 					];
 				}
-			}
+			},
 		},
-	});
+	);
 
 	const printer = new CodePrinter();
 

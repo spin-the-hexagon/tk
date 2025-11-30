@@ -1,9 +1,9 @@
 import * as v from "valibot";
+import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
 import { ImportInfoSchema, type ImportInfo } from "../plugin/analysis";
 import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
-import { walk } from "./walker";
 
 export type LuauAnalysisType =
 	| {
@@ -71,9 +71,11 @@ async function _analyzeImports(
 	const ast = await parseLuauDocument(source, cache);
 	const imports: ImportInfo[] = [];
 
-	await walk(ast.root, {
-		async enter(node: Luau.Node) {
-			if (node.type === "AstExprCall") {
+	walk(
+		ast.root as Luau.Node,
+		{},
+		{
+			AstExprCall(node) {
 				const returnType = evaluateExpressionType(node);
 
 				if (returnType.type === "imported_module") {
@@ -83,9 +85,9 @@ async function _analyzeImports(
 						location: node.location,
 					});
 				}
-			}
+			},
 		},
-	});
+	);
 
 	return imports;
 }

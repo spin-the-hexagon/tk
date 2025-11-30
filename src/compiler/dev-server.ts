@@ -5,6 +5,7 @@ import { createLuauPlugin } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
 import { waitForEventLoop } from "../scheduler/scheduler";
 import { fs } from "../utils/fastfs";
+import { createSourcemapFromFiles } from "../utils/sourcemaps";
 import { Bundle } from "./bundle";
 import { Cache, cacheFileName } from "./cache";
 import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
@@ -88,5 +89,17 @@ export class DevServer {
 		}
 
 		await analyzeImports(src, this.cache);
+
+		// Update sourcemap
+		const sourcemap = createSourcemapFromFiles({
+			config: this.config,
+			files: entries,
+			projectPath: this.path,
+		});
+
+		await Bun.write(
+			resolve(this.path, "sourcemap.json"),
+			JSON.stringify(sourcemap),
+		);
 	}
 }

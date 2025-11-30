@@ -1,6 +1,9 @@
 # `tk`
 
-`tk` (also known as `toolkit`) is an all in one Roblox toolchain.
+> [!WARNING]
+> `tk` is beta software, it might not work, or it might be buggy.
+
+`tk` is an all in one Roblox toolchain.
 
 The end goal is to create a suitable replacement to:
 

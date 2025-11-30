@@ -35,6 +35,6 @@ I don't, I just think there's no good reason to use them when Rokit exists, they
 ## Getting Started
 
 ```
-rokit install spin-the-hexagon/tk # note, at the time of reading this, it might not work yet
+rokit install spin-the-hexagon/tk
 tk init
 ```

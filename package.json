@@ -21,7 +21,8 @@
 		"make-natives-linux": "bun build --compile --target=bun-linux-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",
 		"make-natives-macos": "bun build --compile --target=bun-darwin-arm64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-macos-aarch64.zip ./release/tk -m",
 		"make-natives-windows": "bun build --compile --target=bun-windows-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
-		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos"
+		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
+		"dev": "bun run --watch ./src/index.ts dev ./example"
 	},
 	"dependencies": {
 		"@types/adm-zip": "^0.5.7",

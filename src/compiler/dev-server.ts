@@ -1,16 +1,21 @@
 import { resolve } from "node:path";
+import { debug } from "../cli/logger";
 import type { Config } from "../config/schema";
 import { analyzeImports } from "../luau/analysis";
+import { createLuauPlugin } from "../luau/plugin";
+import type { PluginMetadata } from "../plugin/schema";
 import { waitForEventLoop } from "../scheduler/scheduler";
 import { fs } from "../utils/fastfs";
+import { Bundle } from "./bundle";
 import { Cache, cacheFileName } from "./cache";
-import { scanFiles, type FileEntry } from "./scan-files";
+import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
 
 export class DevServer {
 	path: string;
 	config: Config;
 	isUpdateQueued = false;
 	cache: Cache;
+	plugins: PluginMetadata[] = [];
 
 	constructor(opts: { path: string; config: Config }) {
 		fs.addWatchPath(opts.path);
@@ -26,6 +31,8 @@ export class DevServer {
 		this.cache = new Cache(resolve(this.path, cacheFileName));
 
 		this.updateLoop();
+
+		this.plugins.push(createLuauPlugin());
 	}
 
 	async init() {
@@ -47,10 +54,11 @@ export class DevServer {
 		const index: Promise<FileEntry[]>[] = [];
 		for (const portal of this.config.portals ?? []) {
 			index.push(
-				scanFiles(
-					resolve(this.path, portal.project),
-					portal.roblox.split("."),
-				),
+				scanFiles({
+					path: resolve(this.path, portal.project),
+					robloxPath: portal.roblox.split("."),
+					plugins: this.plugins,
+				}),
 			);
 		}
 		const entries = (await Promise.all(index)).flat();
@@ -62,6 +70,25 @@ export class DevServer {
 		const entries = await this.scanFiles();
 
 		const src = `local module = require(script.Child)`;
+
+		const entrypoints = entries.filter(
+			(x) => x.type === "code" && x.mode !== "module",
+		) as CodeFileEntry[];
+
+		for (const entry of entrypoints) {
+			const bundle = new Bundle({
+				cache: this.cache,
+				allEntries: entries,
+				files: [entry],
+				plugins: this.plugins,
+			});
+
+			await bundle.sweep();
+
+			const code = await bundle.generateText();
+
+			debug(code);
+		}
 
 		await analyzeImports(src, this.cache);
 	}

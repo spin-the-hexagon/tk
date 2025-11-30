@@ -1,5 +1,5 @@
 {
-	"name": "toolkit",
+	"name": "@spin-the-hexagon/tk",
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,

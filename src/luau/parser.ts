@@ -1,7 +1,9 @@
 import { $ } from "bun";
 import * as v from "valibot";
+import { debug } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import { schedulePromise } from "../scheduler/scheduler";
+import type { Luau } from "./ast";
 import { downloadLuau } from "./download";
 
 async function _parseLuauDocument(
@@ -18,6 +20,8 @@ async function _parseLuauDocument(
 }
 
 export async function parseLuauDocument(source: string, cache: Cache) {
+	debug(source);
+
 	const hash = Bun.hash(source).toString(36);
 
 	const cacheHit = cache.query(
@@ -29,20 +33,23 @@ export async function parseLuauDocument(source: string, cache: Cache) {
 	);
 
 	if (cacheHit) {
-		return cacheHit.ast;
+		return cacheHit.ast as Luau.Document;
 	}
 
 	return schedulePromise({
 		name: `ParseLUA ${hash}`,
 		phase: "parse",
 		async impl() {
-			const ast = await _parseLuauDocument(source, cache);
+			const ast = JSON.parse(
+				await _parseLuauDocument(source, cache),
+			) as Luau.Document;
+			ast.root.hasEnd = false;
 			cache.save({
 				type: "luau:parse",
 				src: hash,
-				ast: JSON.parse(ast),
+				ast,
 			});
-			return JSON.parse(ast);
+			return ast;
 		},
 	});
 }

@@ -10,6 +10,8 @@ export type FastFile = {
 	type?: Promise<FileType>;
 };
 
+const td = new TextDecoder();
+
 /**
  * A small little filesystem cache that respects when things update
  */
@@ -89,6 +91,11 @@ export class FastFS {
 		}
 
 		return file.contents;
+	}
+
+	async readText(path: string): Promise<string> {
+		const bytes = await this.read(path);
+		return td.decode(bytes);
 	}
 
 	readDir(path: string): Promise<string[]> {

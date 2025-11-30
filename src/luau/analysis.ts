@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import type { Cache } from "../compiler/cache";
+import { ImportInfoSchema, type ImportInfo } from "../plugin/analysis";
 import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 import { walk } from "./walker";
@@ -62,14 +63,6 @@ export function evaluateExpressionType(
 
 	return { type: "unknown" };
 }
-
-const ImportInfoSchema = v.object({
-	path: v.array(v.string()),
-	origin: v.union([v.literal("script"), v.literal("game")]),
-	location: v.string() as v.BaseSchema<Luau.Location, Luau.Location, any>,
-});
-
-export type ImportInfo = v.InferOutput<typeof ImportInfoSchema>;
 
 async function _analyzeImports(
 	source: string,

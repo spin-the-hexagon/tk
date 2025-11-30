@@ -1,6 +1,6 @@
 export namespace Luau {
 	export interface Document {
-		root: Statement;
+		root: BlockStatement;
 		commentLocations: Comment[];
 	}
 
@@ -93,7 +93,7 @@ export namespace Luau {
 		attributes: unknown[];
 		generics: unknown[];
 		genericPacks: unknown[];
-		args: unknown[];
+		args: Local[];
 		vararg: boolean;
 		varargLocation: Location;
 		varargAnnotation?: Type;
@@ -144,6 +144,7 @@ export namespace Luau {
 		var: Local;
 		from: Expression;
 		to: Expression;
+		step?: Expression;
 		body: BlockStatement;
 		hasDo: boolean;
 	}
@@ -155,7 +156,18 @@ export namespace Luau {
 		expr: Expression;
 	}
 
-	export interface TableItem {}
+	export type TableItem =
+		| {
+				type: "AstExprTableItem";
+				kind: "record" | "general";
+				key: Expression;
+				value: Expression;
+		  }
+		| {
+				type: "AstExprTableItem";
+				kind: "item";
+				value: Expression;
+		  };
 
 	export interface ExpressionStatement {
 		type: "AstStatExpr";
@@ -255,5 +267,5 @@ export namespace Luau {
 		parameters: Type[];
 	}
 
-	export type Node = Expression | Statement | Type;
+	export type Node = Expression | Statement | Type | Local | TableItem;
 }

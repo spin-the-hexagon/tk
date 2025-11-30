@@ -1,3 +1,5 @@
+import type { Luau } from "./ast";
+
 export interface WalkerContext {
 	skip: () => void;
 	remove: () => void;
@@ -6,14 +8,14 @@ export interface WalkerContext {
 
 export interface AsyncHandler {
 	enter?: (
-		node: any,
-		parent: any,
+		node: Luau.Node,
+		parent: Luau.Node,
 		prop: string,
 		index: number,
 	) => Promise<void>;
 	leave?: (
-		node: any,
-		parent: any,
+		node: Luau.Node,
+		parent: Luau.Node,
 		prop: string,
 		index: number,
 	) => Promise<void>;

@@ -1,4 +1,4 @@
-let module = {}
+local module = {}
 
 function module.formatHello(name: string)
 	print("Hello, " .. name)

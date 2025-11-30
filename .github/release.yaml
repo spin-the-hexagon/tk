@@ -1,0 +1,58 @@
+name: Release
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout source
+              uses: actions/checkout@v4
+
+            - name: Install Bun
+              uses: oven-sh/setup-bun@v1
+
+            - name: Read version from package.json
+              id: pkg
+              run: |
+                  VERSION=$(jq -r '.version' package.json)
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+            - name: Check if release already exists
+              id: check
+              run: |
+                  if gh release view "v${{ steps.pkg.outputs.version }}" >/dev/null 2>&1; then
+                    echo "exists=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "exists=false" >> $GITHUB_OUTPUT
+                  fi
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build natives (only if release does not exist)
+              if: steps.check.outputs.exists == 'false'
+              run: bun make-natives
+
+            - name: Create release
+              if: steps.check.outputs.exists == 'false'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.pkg.outputs.version }}
+                  name: v${{ steps.pkg.outputs.version }}
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload release assets
+              if: steps.check.outputs.exists == 'false'
+              run: |
+                  for file in ./release/*; do
+                    echo "Uploading $file"
+                    gh release upload "v${{ steps.pkg.outputs.version }}" "$file"
+                  done
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

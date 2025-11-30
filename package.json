@@ -3,20 +3,27 @@
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,
+	"version": "0.0.1",
 	"devDependencies": {
 		"@types/bun": "latest",
 		"prettier": "^3.6.2",
-		"prettier-plugin-organize-imports": "^4.3.0"
+		"prettier-plugin-organize-imports": "^4.3.0",
+		"@changesets/cli": "^2.29.8"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"scripts": {
 		"start": "bun run ./src/index.ts",
-		"fmt": "prettier . -w"
+		"fmt": "prettier . -w",
+		"change": "bun run --bun changeset",
+		"version": "bun run --bun changeset version",
+		"make-natives-linux": "bun build --compile --target=bun-linux-x64-modern ./src/index.ts --outfile ./release/tk",
+		"make-natives-windows": "bun build --compile --target=bun-darwin-arm64-modern ./src/index.ts --outfile ./release/tk-macos",
+		"make-natives-macos": "bun build --compile --target=bun-windows-x64-modern ./src/index.ts --outfile ./release/tk",
+		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos"
 	},
 	"dependencies": {
-		"@polychromatist/tree-sitter-luau": "^0.2.1",
 		"@types/adm-zip": "^0.5.7",
 		"adm-zip": "^0.5.16",
 		"chalk": "^5.6.2",

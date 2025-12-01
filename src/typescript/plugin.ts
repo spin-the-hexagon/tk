@@ -1,4 +1,5 @@
-import { sync as resolveSync } from "oxc-resolver";
+import { resolveSync } from "bun";
+import { join } from "node:path";
 import { warn } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry } from "../compiler/scan-files";
@@ -38,15 +39,18 @@ export function pluginTypescript(): PluginMetadata {
 			const transpiler = new Bun.Transpiler({
 				loader: "tsx",
 			});
-			const imports = transpiler.scanImports(src); // We're using Bun.Transpiler instead of OXC because Bun-native APIs are faster
+			const imports = transpiler.scanImports(src);
 			const dependencies: string[] = [];
 			for (const imp of imports) {
-				const path = resolveSync(imp.path, file.path).path;
-				if (!path) {
+				try {
+					const resolvedPath = resolveSync(
+						join(file.path, ".."),
+						imp.path,
+					);
+					dependencies.push(resolvedPath);
+				} catch {
 					warn(`Failed to resolve ${imp.path} from ${file.path}`);
-					continue;
 				}
-				dependencies.push(path);
 			}
 			return {
 				imports: dependencies.map((x) => ({

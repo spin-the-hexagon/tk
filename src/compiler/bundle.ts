@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { warn } from "../cli/logger";
+import { debug, warn } from "../cli/logger";
 import { integrateLuauPrinter } from "../luau/printer";
 import { transpileToTKPack } from "../luau/tkpack-transpile";
 import { findPlugin, type PluginMetadata } from "../plugin/schema";
@@ -91,6 +91,7 @@ export class Bundle {
 
 					p++;
 				}
+				debug(self.files);
 			},
 		});
 	}

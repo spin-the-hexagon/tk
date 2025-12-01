@@ -79,7 +79,7 @@ export function block(): SchedulerBlock {
 		async process() {
 			let lastUpdateTime = 0;
 
-			while (true) {
+			outer: while (true) {
 				const tasks = this.tasks
 					.filter((x) => !x.done)
 					.toSorted(
@@ -88,7 +88,12 @@ export function block(): SchedulerBlock {
 							getSchedulerPhaseOrdinal(b.phase),
 					);
 
-				if (tasks.length === 0) break;
+				for (let i = 0; tasks.length === 0; i++) {
+					if (i > 24) {
+						break outer;
+					}
+					await waitForEventLoop();
+				}
 
 				let minPhase = tasks[0]!.phase;
 
@@ -115,9 +120,10 @@ export function block(): SchedulerBlock {
 
 				await waitForEventLoop();
 			}
+
 			this.done = true;
 			showBlockCompletedLine(this);
-			scheduler.currentBlock = block();
+			beginNewBlock();
 		},
 		done: false,
 		add(task) {
@@ -134,7 +140,7 @@ export async function startRunLoop() {
 		await waitForEventLoop();
 		const block = getCurrentBlock();
 		if (block.tasks.length > 0) {
-			block.process();
+			await block.process();
 		}
 	}
 }

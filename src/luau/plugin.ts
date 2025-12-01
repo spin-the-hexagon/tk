@@ -4,7 +4,7 @@ import { fs } from "../utils/fastfs";
 import { analyzeImports } from "./analysis";
 import { parseLuauDocument } from "./parser";
 
-export function createLuauPlugin(): PluginMetadata {
+export function pluginLuau(): PluginMetadata {
 	return {
 		name: "Luau",
 		id: "luau",

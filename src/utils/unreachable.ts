@@ -1,3 +1,3 @@
 export function unreachable(ty: never): never {
-	throw new Error(`UNREACHABLE: ${ty}`);
+	throw new Error(`UNREACHABLE: ${JSON.stringify(ty)}`);
 }

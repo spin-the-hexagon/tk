@@ -11,6 +11,7 @@ import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
 import { decodeCodeString, type CodeString } from "../utils/sourcemap";
+import { unreachable } from "../utils/unreachable";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
 export class Bundle {
@@ -69,17 +70,23 @@ export class Bundle {
 					const analysis = await plugin.analyze(file, self.cache);
 
 					for (const imp of analysis.imports) {
-						let dmPath = [...file.dataModelPath];
+						if (imp.type === "classic") {
+							let dmPath = [...file.dataModelPath];
 
-						if (imp.origin === "game") {
-							dmPath.push("game");
+							if (imp.origin === "game") {
+								dmPath.push("game");
+							}
+
+							dmPath.push(...imp.path);
+
+							dmPath = resolveDataModelPath(dmPath);
+
+							self.addFileDataModel(dmPath);
+						} else if (imp.type === "absolute-path") {
+							self.addFilePath(imp.path);
+						} else {
+							unreachable(imp);
 						}
-
-						dmPath.push(...imp.path);
-
-						dmPath = resolveDataModelPath(dmPath);
-
-						self.addFileDataModel(dmPath);
 					}
 
 					p++;

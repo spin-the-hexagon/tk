@@ -1,0 +1,17 @@
+name = "example-ts"
+version = 0
+
+[[portals]]
+project = "./src/shared"
+roblox = "game.ReplicatedStorage.src"
+
+[[portals]]
+project = "./src/client"
+roblox = "game.StarterPlayer.StarterPlayerScripts.src"
+
+[[portals]]
+project = "./src/server"
+roblox = "game.ServerScriptService.src"
+
+[experimental]
+typescript = true

@@ -1,7 +1,7 @@
 local module = {}
 
 function module.formatHello(name: string)
-	print("Hello, " .. name)
+	return "Hello, " .. name
 end
 
 return module

@@ -83,6 +83,7 @@ async function _analyzeImports(
 						path: returnType.path,
 						origin: returnType.origin,
 						location: node.location,
+						type: "classic",
 					});
 				}
 			},

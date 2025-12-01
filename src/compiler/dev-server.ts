@@ -1,8 +1,10 @@
 import { resolve } from "node:path";
 import type { Config } from "../config/schema";
-import { createLuauPlugin } from "../luau/plugin";
+import { isExperimentEnabled } from "../config/utils";
+import { pluginLuau } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
 import { waitForEventLoop } from "../scheduler/scheduler";
+import { pluginTypescript } from "../typescript/plugin";
 import { fs } from "../utils/fastfs";
 import { createSourcemapFromFiles } from "../utils/rojo-sourcemaps";
 import { Bundle } from "./bundle";
@@ -31,7 +33,11 @@ export class DevServer {
 
 		this.updateLoop();
 
-		this.plugins.push(createLuauPlugin());
+		this.plugins.push(pluginLuau());
+
+		if (isExperimentEnabled(this.config, "typescript")) {
+			this.plugins.push(pluginTypescript());
+		}
 	}
 
 	async init() {

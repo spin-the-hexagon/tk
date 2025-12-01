@@ -64,7 +64,7 @@ export const init = command({
 		);
 		await Bun.write(
 			resolve(path, "src", "shared", "formatHello.luau"),
-			`let module = {}\n\nfunction module.formatHello(name: string)\n\tprint("Hello, " .. name)\nend\n\nreturn module`,
+			`let module = {}\n\nfunction module.formatHello(name: string)\n\treturn "Hello, " .. name\nend\n\nreturn module`,
 		);
 
 		const printer = createPrinter();

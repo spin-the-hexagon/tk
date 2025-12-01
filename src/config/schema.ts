@@ -11,7 +11,7 @@ export const ConfigSchema = v.object({
 	name: v.string(),
 	portals: v.optional(v.array(PortalSchema)),
 	version: v.literal(0),
-	experimental: v.optional(v.record(ExperimentalFlagSchema, v.string())),
+	experimental: v.optional(v.record(ExperimentalFlagSchema, v.boolean())),
 });
 
 export type Config = v.InferOutput<typeof ConfigSchema>;

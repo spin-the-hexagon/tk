@@ -22,15 +22,18 @@
 		"make-natives-macos": "bun build --compile --target=bun-darwin-arm64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-macos-aarch64.zip ./release/tk -m",
 		"make-natives-windows": "bun build --compile --target=bun-windows-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
 		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
-		"dev": "bun run --watch ./src/index.ts dev ./example"
+		"dev": "bun run --watch ./src/index.ts dev ./example",
+		"dev-ts": "bun run --watch ./src/index.ts dev ./example-ts"
 	},
 	"dependencies": {
+		"@oxc-project/types": "^0.99.0",
 		"@types/adm-zip": "^0.5.7",
 		"adm-zip": "^0.5.16",
 		"chalk": "^5.6.2",
 		"chokidar": "^4.0.3",
 		"cmd-ts": "^0.14.3",
 		"ebnf": "^1.9.1",
+		"oxc-parser": "^0.99.0",
 		"smol-toml": "^1.4.2",
 		"valibot": "^1.1.0",
 		"zimmerframe": "^1.1.4"

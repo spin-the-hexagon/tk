@@ -5,10 +5,13 @@ const PortalSchema = v.object({
 	project: v.string(),
 });
 
+export const ExperimentalFlagSchema = v.union([v.literal("typescript")]);
+
 export const ConfigSchema = v.object({
 	name: v.string(),
 	portals: v.optional(v.array(PortalSchema)),
 	version: v.literal(0),
+	experimental: v.optional(v.record(ExperimentalFlagSchema, v.string())),
 });
 
 export type Config = v.InferOutput<typeof ConfigSchema>;

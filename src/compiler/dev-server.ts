@@ -1,11 +1,10 @@
 import { resolve } from "node:path";
 import type { Config } from "../config/schema";
-import { analyzeImports } from "../luau/analysis";
 import { createLuauPlugin } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
 import { waitForEventLoop } from "../scheduler/scheduler";
 import { fs } from "../utils/fastfs";
-import { createSourcemapFromFiles } from "../utils/sourcemaps";
+import { createSourcemapFromFiles } from "../utils/rojo-sourcemaps";
 import { Bundle } from "./bundle";
 import { Cache, cacheFileName } from "./cache";
 import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
@@ -69,8 +68,6 @@ export class DevServer {
 	async update() {
 		const entries = await this.scanFiles();
 
-		const src = `local module = require(script.Child)`;
-
 		const entrypoints = entries.filter(
 			(x) => x.type === "code" && x.mode !== "module",
 		) as CodeFileEntry[];
@@ -87,8 +84,6 @@ export class DevServer {
 
 			const code = await bundle.generateText();
 		}
-
-		await analyzeImports(src, this.cache);
 
 		// Update sourcemap
 		const sourcemap = createSourcemapFromFiles({

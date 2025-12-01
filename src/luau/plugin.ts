@@ -2,6 +2,7 @@ import { TK_VERSION } from "../constants";
 import type { PluginMetadata } from "../plugin/schema";
 import { fs } from "../utils/fastfs";
 import { analyzeImports } from "./analysis";
+import { parseLuauDocument } from "./parser";
 
 export function createLuauPlugin(): PluginMetadata {
 	return {
@@ -49,7 +50,9 @@ export function createLuauPlugin(): PluginMetadata {
 			};
 		},
 		async transform(props) {
-			props.codeprinter.segments.push(props.src);
+			return {
+				ast: await parseLuauDocument(props.src, props.cache),
+			};
 		},
 	};
 }

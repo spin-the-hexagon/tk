@@ -1,26 +1,21 @@
 import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
 import { action } from "../scheduler/action";
-import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
 import type { Luau } from "./ast";
-import { parseLuauDocument } from "./parser";
-import { integrateLuauPrinter } from "./printer";
 
 async function _transpileToTKPack({
-	src,
+	ast,
 	cache,
 	pathDM,
 }: {
-	src: string;
+	ast: Luau.Document;
 	cache: Cache;
 	pathDM: string[];
-}): Promise<string> {
-	const parsed = await parseLuauDocument(src, cache);
-
+}): Promise<Luau.Document> {
 	walk(
-		parsed.root as Luau.Node,
+		ast.root as Luau.Node,
 		{},
 		{
 			AstExprCall(node) {
@@ -67,32 +62,26 @@ async function _transpileToTKPack({
 		},
 	);
 
-	const printer = new CodePrinter();
-
-	integrateLuauPrinter(printer);
-
-	printer.printNode(parsed.root);
-
-	return printer.text;
+	return ast;
 }
 
 export async function transpileToTKPack({
-	src,
+	ast,
 	cache,
 	pathDM,
 }: {
-	src: string;
+	ast: Luau.Document;
 	cache: Cache;
 	pathDM: string[];
-}): Promise<string> {
+}): Promise<Luau.Document> {
 	return await action({
 		name: `Transpile ${pathDM.join(".")} to TKPack`,
 		id: "tkpack:transpile",
-		args: [{ src, pathDM }],
+		args: [{ ast, pathDM }],
 		phase: "parse",
 		cache,
 		async impl() {
-			return await _transpileToTKPack({ pathDM, src, cache });
+			return await _transpileToTKPack({ pathDM, ast, cache });
 		},
 	});
 }

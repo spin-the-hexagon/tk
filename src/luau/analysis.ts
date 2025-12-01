@@ -1,7 +1,7 @@
-import * as v from "valibot";
 import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
-import { ImportInfoSchema, type ImportInfo } from "../plugin/analysis";
+import { type ImportInfo } from "../plugin/analysis";
+import { action } from "../scheduler/action";
 import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 
@@ -96,26 +96,14 @@ export async function analyzeImports(
 	source: string,
 	cache: Cache,
 ): Promise<ImportInfo[]> {
-	const hash = Bun.hash(source).toString(36);
-	const cacheHit = cache.query(
-		v.object({
-			type: v.literal("luau:analyze_imports"),
-			hash: v.literal(hash),
-			imports: v.array(ImportInfoSchema),
-		}),
-	);
-
-	if (cacheHit) {
-		return cacheHit.imports;
-	}
-
-	const result = await _analyzeImports(source, cache);
-
-	cache.save({
-		type: "luau:analyze_imports",
-		hash,
-		imports: result,
+	return action({
+		id: "luau:analyze_imports",
+		name: "Analyze file imports",
+		phase: "mark",
+		args: [source],
+		cache,
+		impl(source) {
+			return _analyzeImports(source, cache);
+		},
 	});
-
-	return result;
 }

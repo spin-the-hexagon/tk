@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry } from "../compiler/scan-files";
-import type { CodePrinter } from "../utils/code-printer";
+import type { Luau } from "../luau/ast";
 import type { Analysis } from "./analysis";
 
 export const PluginFileIdentificationSchema = v.union([
@@ -19,10 +19,14 @@ export const PluginCodeFormatSchema = v.object({
 export const PluginFileFormatSchema = v.union([PluginCodeFormatSchema]);
 
 export interface PluginTransformProps {
-	codeprinter: CodePrinter;
 	src: string;
 	path: string;
 	pathDatamodel: string[];
+	cache: Cache;
+}
+
+export interface PluginTransformResult {
+	ast: Luau.Document;
 }
 
 export const PluginMetadataSchema = v.object({
@@ -33,9 +37,9 @@ export const PluginMetadataSchema = v.object({
 	analyze: v.custom<(file: CodeFileEntry, cache: Cache) => Promise<Analysis>>(
 		(x) => true,
 	),
-	transform: v.custom<(props: PluginTransformProps) => Promise<void>>(
-		(x) => true,
-	),
+	transform: v.custom<
+		(props: PluginTransformProps) => Promise<PluginTransformResult>
+	>((x) => true),
 });
 
 export type PluginMetadata = v.InferOutput<typeof PluginMetadataSchema>;

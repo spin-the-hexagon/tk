@@ -20,7 +20,7 @@ async function _parseLuauDocument(
 export async function parseLuauDocument(source: string, cache: Cache) {
 	return await action({
 		name: "Parse Luau document",
-		id: "parse:luau",
+		id: "luau:parse_document",
 		args: [source],
 		async impl(source: string) {
 			return await _parseLuauDocument(source, cache);

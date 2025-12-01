@@ -1,12 +1,10 @@
+import type { Luau } from "../luau/ast";
+import {
+	createPartialLocationTagFromLuauLocation,
+	getLocationTag,
+	type PartialLocationTag,
+} from "./sourcemap";
 import { unreachable } from "./unreachable";
-
-export type TextSegment =
-	| string
-	| {
-			type: "location";
-			line: number;
-			col: number;
-	  };
 
 export function isAlphanumeric(char: string) {
 	return (
@@ -19,13 +17,14 @@ export function isAlphanumeric(char: string) {
 export class CodePrinter {
 	mode: "lua" | "ts" = "lua";
 	indent = 0;
-	segments: TextSegment[] = [];
+	segments: string[] = [];
 	gapWasJustWritten = false;
 	whitespaceWasJustWritten = false;
 	nodePrinters: Record<string, NodePrinter<any>> = {};
+	sourceFile = ""; // Required to create proper source tags for Luau printing
 
 	get text() {
-		return this.segments.filter((x) => typeof x === "string").join("");
+		return this.segments.join("");
 	}
 
 	addIndent() {
@@ -46,13 +45,7 @@ export class CodePrinter {
 	push(text: string) {
 		if (
 			isAlphanumeric(text[0]!) &&
-			isAlphanumeric(
-				[
-					...this.segments
-						.filter((x) => typeof x === "string")
-						.join(""),
-				].at(-1)!,
-			)
+			isAlphanumeric([...this.segments.join("")].at(-1)!)
 		) {
 			this.segments.push(" ");
 		}
@@ -114,7 +107,26 @@ export class CodePrinter {
 			);
 		}
 
+		let startTag: PartialLocationTag | undefined;
+		let endTag: PartialLocationTag | undefined;
+
+		if ("location" in node && typeof node.location === "string") {
+			const luauLocation = node.location as Luau.Location;
+			let [nStartTag, nEndTag] = createPartialLocationTagFromLuauLocation(
+				luauLocation,
+				this.sourceFile,
+			);
+			startTag = nStartTag;
+			endTag = nEndTag;
+		}
+
+		if (startTag) this.locate(startTag);
 		printer.print(this, node);
+		if (endTag) this.locate(endTag);
+	}
+
+	locate(tag: PartialLocationTag) {
+		this.segments.push(getLocationTag(tag).id);
 	}
 
 	integratePrinters<NodeType extends { type: string }>(props: {

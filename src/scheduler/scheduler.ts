@@ -89,10 +89,10 @@ export function block(): SchedulerBlock {
 					);
 
 				for (let i = 0; tasks.length === 0; i++) {
-					if (i > 24) {
+					if (i > 3) {
 						break outer;
 					}
-					await waitForEventLoop();
+					await wait();
 				}
 
 				let minPhase = tasks[0]!.phase;

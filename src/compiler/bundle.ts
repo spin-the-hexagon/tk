@@ -1,12 +1,16 @@
+import { basename } from "node:path";
 import { warn } from "../cli/logger";
+import { integrateLuauPrinter } from "../luau/printer";
 import { transpileToTKPack } from "../luau/tkpack-transpile";
 import { findPlugin, type PluginMetadata } from "../plugin/schema";
+import { action } from "../scheduler/action";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { fs } from "../utils/fastfs";
 import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
+import { decodeCodeString, type CodeString } from "../utils/sourcemap";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
 export class Bundle {
@@ -50,32 +54,41 @@ export class Bundle {
 	}
 
 	async sweep() {
-		let p = 0;
+		const self = this;
+		await action({
+			name: "Sweep bundle",
+			id: "bundle:sweep",
+			args: [],
+			phase: "mark",
+			async impl() {
+				let p = 0;
 
-		while (p < this.files.length) {
-			const file = this.files[p]!;
-			const plugin = findPlugin(this.plugins, file.pluginId);
-			const analysis = await plugin.analyze(file, this.cache);
+				while (p < self.files.length) {
+					const file = self.files[p]!;
+					const plugin = findPlugin(self.plugins, file.pluginId);
+					const analysis = await plugin.analyze(file, self.cache);
 
-			for (const imp of analysis.imports) {
-				let dmPath = [...file.dataModelPath];
+					for (const imp of analysis.imports) {
+						let dmPath = [...file.dataModelPath];
 
-				if (imp.origin === "game") {
-					dmPath.push("game");
+						if (imp.origin === "game") {
+							dmPath.push("game");
+						}
+
+						dmPath.push(...imp.path);
+
+						dmPath = resolveDataModelPath(dmPath);
+
+						self.addFileDataModel(dmPath);
+					}
+
+					p++;
 				}
-
-				dmPath.push(...imp.path);
-
-				dmPath = resolveDataModelPath(dmPath);
-
-				this.addFileDataModel(dmPath);
-			}
-
-			p++;
-		}
+			},
+		});
 	}
 
-	async generateText(): Promise<string> {
+	private async _generateText(): Promise<string> {
 		const cp = new CodePrinter();
 
 		cp.comment(
@@ -102,25 +115,40 @@ export class Bundle {
 
 			const plugin = findPlugin(this.plugins, file.pluginId);
 
-			const transformPrinter = new CodePrinter();
+			integrateLuauPrinter(cp);
 
-			plugin.transform({
-				codeprinter: transformPrinter,
-				path: file.path,
-				pathDatamodel: file.dataModelPath,
-				src,
+			const cache = this.cache;
+
+			const { ast } = await action({
+				name: `Transpile ${basename(file.path)} with ${plugin.id}`,
+				id: `${plugin.id}:transpile_to_luau`,
+				args: [
+					{
+						path: file.path,
+						dataModelPath: file.dataModelPath,
+						src,
+					},
+				],
+				cache: cache,
+				phase: "build",
+				async impl() {
+					return await plugin.transform({
+						path: file.path,
+						pathDatamodel: file.dataModelPath,
+						src,
+						cache,
+					});
+				},
 			});
 
-			src = transformPrinter.text;
-
 			// Step 2: Run it through the transpiler to turn require statements into tkpack.import :3
-			src = await transpileToTKPack({
-				src: src,
-				cache: this.cache,
+			await transpileToTKPack({
+				ast,
+				cache,
 				pathDM: file.dataModelPath,
 			});
 
-			cp.add(src);
+			cp.printNode(ast.root);
 
 			cp.gap();
 			cp.add("end)()");
@@ -135,5 +163,19 @@ export class Bundle {
 		}
 
 		return cp.text;
+	}
+
+	async generateText(): Promise<CodeString> {
+		const self = this;
+		const str = await action({
+			name: "Generate bundle text",
+			id: "bundle:generate_text",
+			args: [],
+			impl() {
+				return self._generateText();
+			},
+			phase: "build",
+		});
+		return decodeCodeString(str);
 	}
 }

@@ -1,5 +1,11 @@
 # @spin-the-hexagon/tk
 
+## 0.0.5
+
+### Patch Changes
+
+- bump version for a release, no good changelogs until 1.0.0
+
 ## 0.0.4
 
 ### Patch Changes

@@ -1,7 +1,6 @@
-import * as v from "valibot";
 import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
-import { schedulePromise } from "../scheduler/scheduler";
+import { action } from "../scheduler/action";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
@@ -86,33 +85,14 @@ export async function transpileToTKPack({
 	cache: Cache;
 	pathDM: string[];
 }): Promise<string> {
-	const hash = Bun.hash(src).toString(36);
-
-	const cacheHit = cache.query(
-		v.object({
-			type: v.literal("tkpack:transpile"),
-			src: v.literal(hash),
-			transpiled: v.string(),
-			dataModelPath: v.custom((x) => Bun.deepEquals(x, pathDM)),
-		}),
-	);
-
-	if (cacheHit) {
-		return cacheHit.transpiled as string;
-	}
-
-	return schedulePromise({
-		name: `Transpile module ${pathDM.join(".")}`,
+	return await action({
+		name: `Transpile ${pathDM.join(".")} to TKPack`,
+		id: "tkpack:transpile",
+		args: [{ src, pathDM }],
 		phase: "parse",
+		cache,
 		async impl() {
-			const transpiled = await _transpileToTKPack({ src, cache, pathDM });
-			cache.save({
-				type: "tkpack:transpile",
-				src: hash,
-				transpiled,
-				dataModelPath: pathDM,
-			});
-			return transpiled;
+			return await _transpileToTKPack({ pathDM, src, cache });
 		},
 	});
 }

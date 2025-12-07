@@ -4,11 +4,7 @@ import type { CodeFileEntry } from "../compiler/scan-files";
 import type { Luau } from "../luau/ast";
 import type { Analysis } from "./analysis";
 
-export const PluginFileIdentificationSchema = v.union([
-	v.literal("module"),
-	v.literal("client"),
-	v.literal("server"),
-]);
+export const PluginFileIdentificationSchema = v.union([v.literal("module"), v.literal("client"), v.literal("server")]);
 
 export const PluginCodeFormatSchema = v.object({
 	type: v.literal("code"),
@@ -34,18 +30,14 @@ export const PluginMetadataSchema = v.object({
 	id: v.string(),
 	version: v.number(),
 	fileFormats: v.array(PluginFileFormatSchema),
-	analyze: v.custom<(file: CodeFileEntry, cache: Cache) => Promise<Analysis>>(
-		(x) => true,
-	),
-	transform: v.custom<
-		(props: PluginTransformProps) => Promise<PluginTransformResult>
-	>((x) => true),
+	analyze: v.custom<(file: CodeFileEntry, cache: Cache) => Promise<Analysis>>(x => true),
+	transform: v.custom<(props: PluginTransformProps) => Promise<PluginTransformResult>>(x => true),
 });
 
 export type PluginMetadata = v.InferOutput<typeof PluginMetadataSchema>;
 
 export function findPlugin(plugins: PluginMetadata[], pluginId: string) {
-	const plug = plugins.find((x) => x.id === pluginId);
+	const plug = plugins.find(x => x.id === pluginId);
 
 	if (plug) return plug;
 

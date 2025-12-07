@@ -16,11 +16,7 @@ function formatColonMessage(message: string) {
 	return chalk.italic.gray(nonFocal) + chalk.bold.red(focal);
 }
 
-function formatValibotError(
-	issue: v.BaseIssue<any>,
-	printer: Printer,
-	starterPath: string = "",
-) {
+function formatValibotError(issue: v.BaseIssue<any>, printer: Printer, starterPath: string = "") {
 	let path = starterPath;
 
 	for (const segment of issue.path ?? []) {
@@ -51,11 +47,7 @@ export async function loadConfig(configPath: string): Promise<Config | null> {
 
 	// Check if file exists
 	if (!(await Bun.file(absolutePath).exists())) {
-		console.error(
-			chalk.red.bold("Configuration file not found"),
-			"\n",
-			chalk.gray(`  Path: ${absolutePath}`),
-		);
+		console.error(chalk.red.bold("Configuration file not found"), "\n", chalk.gray(`  Path: ${absolutePath}`));
 		process.exit(1);
 	}
 

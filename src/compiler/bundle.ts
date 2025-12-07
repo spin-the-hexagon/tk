@@ -20,12 +20,7 @@ export class Bundle {
 	plugins: PluginMetadata[];
 	cache: Cache;
 
-	constructor(props: {
-		plugins: PluginMetadata[];
-		cache: Cache;
-		allEntries: FileEntry[];
-		files: CodeFileEntry[];
-	}) {
+	constructor(props: { plugins: PluginMetadata[]; cache: Cache; allEntries: FileEntry[]; files: CodeFileEntry[] }) {
 		this.plugins = props.plugins;
 		this.cache = props.cache;
 		this.allEntries = props.allEntries;
@@ -33,9 +28,9 @@ export class Bundle {
 	}
 
 	addFilePath(path: string) {
-		if (this.files.find((x) => x.path === path)) return;
+		if (this.files.find(x => x.path === path)) return;
 
-		const entry = this.allEntries.find((x) => x.path === path);
+		const entry = this.allEntries.find(x => x.path === path);
 
 		if (entry?.type !== "code") return;
 
@@ -43,9 +38,7 @@ export class Bundle {
 	}
 
 	addFileDataModel(dm: string[]) {
-		const entry = this.allEntries.find(
-			(x) => x.dataModelPath.join(".") === dm.join("."),
-		);
+		const entry = this.allEntries.find(x => x.dataModelPath.join(".") === dm.join("."));
 
 		if (entry) {
 			this.addFilePath(entry.path);
@@ -113,9 +106,7 @@ export class Bundle {
 		for (const file of this.files) {
 			cp.gap();
 			cp.comment(file.path);
-			cp.add(
-				`tkpack.declare(${cp.escapeString(file.dataModelPath.join("."))},function()`,
-			);
+			cp.add(`tkpack.declare(${cp.escapeString(file.dataModelPath.join("."))},function()`);
 			cp.gap();
 
 			// Step 1: Generate lua code with plugin (bleh)
@@ -154,7 +145,11 @@ export class Bundle {
 				ast,
 				cache,
 				pathDM: file.dataModelPath,
+				files: this.allEntries,
+				filePath: file.path,
 			});
+
+			debug(ast.root);
 
 			cp.printNode(ast.root);
 
@@ -162,13 +157,11 @@ export class Bundle {
 			cp.add("end)()");
 		}
 
-		for (const entrypoint of this.files.filter(
-			(x) => x.mode !== "module",
-		)) {
-			cp.add(
-				`tkpack.include(${cp.escapeString(entrypoint.dataModelPath.join("."))});`,
-			);
+		for (const entrypoint of this.files.filter(x => x.mode !== "module")) {
+			cp.add(`tkpack.include(${cp.escapeString(entrypoint.dataModelPath.join("."))});`);
 		}
+
+		debug(cp.text);
 
 		return cp.text;
 	}

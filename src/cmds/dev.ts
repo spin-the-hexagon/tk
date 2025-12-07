@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { command, optional, positional } from "cmd-ts";
 import { Directory } from "cmd-ts/batteries/fs";
 import { resolve } from "node:path";
@@ -18,6 +19,20 @@ export const dev = command({
 		const config = await loadConfig(tkTomlPath);
 
 		if (!config) return;
+
+		const experimentalFeatures = config.experimental
+			? Object.entries(config.experimental)
+					.filter(([_, v]) => v)
+					.map(([k]) => k)
+			: [];
+
+		if (experimentalFeatures.length > 0) {
+			console.log(
+				chalk.red(
+					`WARNING: You're rolling experimental features; specifically, ${experimentalFeatures.join(", ")}. Things are going to break.`,
+				),
+			);
+		}
 
 		startRunLoop();
 

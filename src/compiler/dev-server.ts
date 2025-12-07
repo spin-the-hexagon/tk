@@ -74,9 +74,7 @@ export class DevServer {
 	async update() {
 		const entries = await this.scanFiles();
 
-		const entrypoints = entries.filter(
-			(x) => x.type === "code" && x.mode !== "module",
-		) as CodeFileEntry[];
+		const entrypoints = entries.filter(x => x.type === "code" && x.mode !== "module") as CodeFileEntry[];
 
 		for (const entry of entrypoints) {
 			const bundle = new Bundle({
@@ -98,9 +96,6 @@ export class DevServer {
 			projectPath: this.path,
 		});
 
-		await Bun.write(
-			resolve(this.path, "sourcemap.json"),
-			JSON.stringify(sourcemap),
-		);
+		await Bun.write(resolve(this.path, "sourcemap.json"), JSON.stringify(sourcemap));
 	}
 }

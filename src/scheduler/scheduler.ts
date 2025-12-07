@@ -81,12 +81,8 @@ export function block(): SchedulerBlock {
 
 			outer: while (true) {
 				const tasks = this.tasks
-					.filter((x) => !x.done)
-					.toSorted(
-						(a, b) =>
-							getSchedulerPhaseOrdinal(a.phase) -
-							getSchedulerPhaseOrdinal(b.phase),
-					);
+					.filter(x => !x.done)
+					.toSorted((a, b) => getSchedulerPhaseOrdinal(a.phase) - getSchedulerPhaseOrdinal(b.phase));
 
 				for (let i = 0; tasks.length === 0; i++) {
 					if (i > 3) {
@@ -103,7 +99,7 @@ export function block(): SchedulerBlock {
 
 					const result = task.exec();
 
-					result.then((x) => {
+					result.then(x => {
 						task.done = true;
 					});
 

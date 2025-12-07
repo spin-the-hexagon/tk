@@ -19,7 +19,7 @@ export class FastFS {
 	private watchingPaths = new Set<string>();
 	private watcher = watch([], {
 		depth: 99,
-		ignored: [(x) => x.includes(".tk")],
+		ignored: [x => x.includes(".tk")],
 	});
 	private files = new Map<string, FastFile>();
 	private updateHooks = new Set<() => void>();
@@ -60,19 +60,19 @@ export class FastFS {
 	}
 
 	constructor() {
-		this.watcher.on("add", (path) => {
+		this.watcher.on("add", path => {
 			this.invalidateChildren(resolve(path, ".."));
 			this.invalidateType(resolve(path));
-			this.updateHooks.forEach((x) => x());
+			this.updateHooks.forEach(x => x());
 		});
-		this.watcher.on("unlink", (path) => {
+		this.watcher.on("unlink", path => {
 			this.invalidateChildren(resolve(path, ".."));
 			this.invalidateType(resolve(path));
-			this.updateHooks.forEach((x) => x());
+			this.updateHooks.forEach(x => x());
 		});
-		this.watcher.on("change", (path) => {
+		this.watcher.on("change", path => {
 			this.invalidateContents(resolve(path));
-			this.updateHooks.forEach((x) => x());
+			this.updateHooks.forEach(x => x());
 		});
 	}
 
@@ -125,7 +125,7 @@ export class FastFS {
 
 		file.type ??= Bun.file(path)
 			.stat()
-			.then((x) => (x.isDirectory() ? "directory" : "file"));
+			.then(x => (x.isDirectory() ? "directory" : "file"));
 
 		if (this.shouldCacheFile(absPath)) {
 			this.files.set(absPath, file);

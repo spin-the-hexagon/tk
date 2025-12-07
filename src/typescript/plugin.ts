@@ -1,16 +1,16 @@
 import { resolveSync } from "bun";
 import { join } from "node:path";
-import { warn } from "../cli/logger";
+import { parse } from "oxc-parser";
+import { debug, warn } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry } from "../compiler/scan-files";
 import { TK_VERSION } from "../constants";
+import type { Luau } from "../luau/ast";
+import { lu } from "../luau/construction-utilities";
 import type { Analysis } from "../plugin/analysis";
-import type {
-	PluginMetadata,
-	PluginTransformProps,
-	PluginTransformResult,
-} from "../plugin/schema";
+import type { PluginMetadata, PluginTransformProps, PluginTransformResult } from "../plugin/schema";
 import { fs } from "../utils/fastfs";
+import { TypescriptTranspiler } from "./transpiler";
 
 export function pluginTypescript(): PluginMetadata {
 	return {
@@ -43,24 +43,42 @@ export function pluginTypescript(): PluginMetadata {
 			const dependencies: string[] = [];
 			for (const imp of imports) {
 				try {
-					const resolvedPath = resolveSync(
-						join(file.path, ".."),
-						imp.path,
-					);
+					const resolvedPath = resolveSync(imp.path, join(file.path, ".."));
 					dependencies.push(resolvedPath);
 				} catch {
 					warn(`Failed to resolve ${imp.path} from ${file.path}`);
 				}
 			}
 			return {
-				imports: dependencies.map((x) => ({
+				imports: dependencies.map(x => ({
 					type: "absolute-path",
 					path: x,
 				})),
 			};
 		},
-		transform(props: PluginTransformProps): Promise<PluginTransformResult> {
-			throw new Error("Typescript transpilation is not a thing yet.");
+		async transform(props: PluginTransformProps): Promise<PluginTransformResult> {
+			const parsed = await parse(props.path, props.src);
+			const program = parsed.program;
+			debug(program);
+			const transpiler = new TypescriptTranspiler();
+			const topLevelBlock = lu.block([]);
+			using _ab = transpiler.blockContext(topLevelBlock);
+
+			transpiler.addPrelude();
+
+			for (const item of program.body) {
+				transpiler.translateStatement(item);
+			}
+
+			transpiler.addPostlude();
+
+			const luaDocument: Luau.Document = {
+				commentLocations: [],
+				root: topLevelBlock,
+			};
+			return {
+				ast: luaDocument,
+			};
 		},
 	};
 }

@@ -14,7 +14,7 @@ export function getSourcemapNode(node: SourcemapNode, path: string[]) {
 
 	if (!child) return node;
 
-	let childNode = node.children.find((x) => x.name === child);
+	let childNode = node.children.find(x => x.name === child);
 
 	if (!childNode) {
 		childNode = {

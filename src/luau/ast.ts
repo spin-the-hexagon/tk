@@ -6,7 +6,7 @@ export namespace Luau {
 
 	export interface Comment {
 		type: "Comment" | "BlockComment";
-		location: Location;
+		location?: Location;
 	}
 
 	export type Location = `${number},${number} - ${number},${number}`;
@@ -23,7 +23,8 @@ export namespace Luau {
 		| ContinueStatement
 		| WhileStatement
 		| ReturnStatement
-		| FunctionStatement;
+		| FunctionStatement
+		| InlineStatement;
 
 	export type Expression =
 		| IndexNameExpression
@@ -41,16 +42,22 @@ export namespace Luau {
 		| ConstantNumberExpression
 		| VarargsExpression;
 
+	export interface InlineStatement {
+		// Spec break, just makes some things easier
+		type: "AstStatInline";
+		body: Statement[];
+	}
+
 	export interface BlockStatement {
 		type: "AstStatBlock";
-		location: Location;
+		location?: Location;
 		hasEnd: boolean;
 		body: Statement[];
 	}
 
 	export interface LocalStatement {
 		type: "AstStatLocal";
-		location: Location;
+		location?: Location;
 		vars: Local[];
 		values: Expression[];
 	}
@@ -58,44 +65,44 @@ export namespace Luau {
 	export interface Local {
 		type: "AstLocal";
 		name: string;
-		location: Location;
+		location?: Location;
 		luauType?: Type | null;
 	}
 
 	export interface IndexNameExpression {
 		type: "AstExprIndexName";
-		location: Location;
+		location?: Location;
 		index: string;
-		indexLocation: Location;
+		indexLocation?: Location;
 		op: "." | ":";
 		expr: Expression;
 	}
 
 	export interface GlobalExpression {
 		type: "AstExprGlobal";
-		location: Location;
+		location?: Location;
 		global: string;
 	}
 
 	export interface CallExpression {
 		type: "AstExprCall";
-		location: Location;
+		location?: Location;
 		self: boolean;
-		argLocation: Location;
+		argLocation?: Location;
 		func: Expression;
 		args: Expression[];
 	}
 
 	export interface FunctionExpression {
 		type: "AstExprFunction";
-		location: Location;
+		location?: Location;
 		self?: Local;
 		attributes: unknown[];
 		generics: unknown[];
 		genericPacks: unknown[];
 		args: Local[];
 		vararg: boolean;
-		varargLocation: Location;
+		varargLocation?: Location;
 		varargAnnotation?: Type;
 		functionDepth: number;
 		debugname: string;
@@ -104,7 +111,7 @@ export namespace Luau {
 
 	export interface IfStatement {
 		type: "AstStatIf";
-		location: Location;
+		location?: Location;
 		hasThen: boolean;
 		condition: Expression;
 		thenbody: BlockStatement;
@@ -113,25 +120,25 @@ export namespace Luau {
 
 	export interface LocalExpression {
 		type: "AstExprLocal";
-		location: Location;
+		location?: Location;
 		local: Local;
 	}
 
 	export interface LocalFunctionStatement {
 		type: "AstStatLocalFunction";
-		location: Location;
+		location?: Location;
 		name: Local;
 		func: FunctionExpression;
 	}
 
 	export interface TableExpression {
 		type: "AstExprTable";
-		location: Location;
+		location?: Location;
 		items: TableItem[];
 	}
 	export interface ForInStatement {
 		type: "AstStatForIn";
-		location: Location;
+		location?: Location;
 		hasIn: boolean;
 		hasDo: boolean;
 		vars: Local[];
@@ -140,7 +147,7 @@ export namespace Luau {
 	}
 	export interface ForStatement {
 		type: "AstStatFor";
-		location: Location;
+		location?: Location;
 		var: Local;
 		from: Expression;
 		to: Expression;
@@ -151,7 +158,7 @@ export namespace Luau {
 
 	export interface UnaryExpression {
 		type: "AstExprUnary";
-		location: Location;
+		location?: Location;
 		op: "Not";
 		expr: Expression;
 	}
@@ -171,40 +178,42 @@ export namespace Luau {
 
 	export interface ExpressionStatement {
 		type: "AstStatExpr";
-		location: Location;
+		location?: Location;
 		expr: Expression;
 	}
 
 	export interface IndexExpressionExpression {
 		type: "AstExprIndexExpr";
-		location: Location;
+		location?: Location;
 		expr: Expression;
 		index: Expression;
 	}
 
 	export interface AssignStatement {
 		type: "AstStatAssign";
-		location: Location;
+		location?: Location;
 		vars: Expression[];
 		values: Expression[];
 	}
 
 	export interface BinaryExpression {
 		type: "AstExprBinary";
-		location: Location;
-		op: "CompareEq" | "CompareNe" | "Or" | "And" | "Concat";
+		location?: Location;
+		op: BinaryOp;
 		left: Expression;
 		right: Expression;
 	}
 
+	export type BinaryOp = "CompareEq" | "CompareNe" | "Or" | "And" | "Concat";
+
 	export interface ContinueStatement {
 		type: "AstStatContinue";
-		location: Location;
+		location?: Location;
 	}
 
 	export interface WhileStatement {
 		type: "AstStatWhile";
-		location: Location;
+		location?: Location;
 		hasDo: boolean;
 		condition: Expression;
 		body: BlockStatement;
@@ -213,57 +222,57 @@ export namespace Luau {
 	export interface ConstantStringExpression {
 		type: "AstExprConstantString";
 		value: string;
-		location: Location;
+		location?: Location;
 	}
 
 	export interface ConstantBooleanExpression {
 		type: "AstExprConstantBool";
 		value: boolean;
-		location: Location;
+		location?: Location;
 	}
 
 	export interface ConstantNumberExpression {
 		type: "AstExprConstantNumber";
 		value: number;
-		location: Location;
+		location?: Location;
 	}
 
 	export interface ConstantNilExpression {
 		type: "AstExprConstantNil";
-		location: Location;
+		location?: Location;
 	}
 
 	export interface ReturnStatement {
 		type: "AstStatReturn";
-		location: Location;
+		location?: Location;
 		list: Expression[];
 	}
 
 	export interface FunctionStatement {
 		type: "AstStatFunction";
-		location: Location;
+		location?: Location;
 		name: Expression;
 		func: FunctionExpression;
 	}
 
 	export interface VarargsExpression {
 		type: "AstExprVarargs";
-		location: Location;
+		location?: Location;
 	}
 
 	export type Type = PackVariadicType | ReferenceType;
 
 	export interface PackVariadicType {
 		type: "AstTypePackVariadic";
-		location: Location;
+		location?: Location;
 		variadicType: Type;
 	}
 
 	export interface ReferenceType {
 		type: "AstTypeReference";
-		location: Location;
+		location?: Location;
 		name: string;
-		nameLocation: Location;
+		nameLocation?: Location;
 		parameters: Type[];
 	}
 

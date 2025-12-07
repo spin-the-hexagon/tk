@@ -4,10 +4,7 @@ import { action } from "../scheduler/action";
 import type { Luau } from "./ast";
 import { downloadLuau } from "./download";
 
-async function _parseLuauDocument(
-	source: string,
-	cache: Cache,
-): Promise<Luau.Document> {
+async function _parseLuauDocument(source: string, cache: Cache): Promise<Luau.Document> {
 	const luauFolder = await downloadLuau(cache);
 	const hash = Bun.hash(source).toString(36);
 	const temporaryFile = cache.artifactPath(`src-${hash}.luau`);

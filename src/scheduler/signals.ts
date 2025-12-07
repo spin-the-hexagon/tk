@@ -32,7 +32,7 @@ export function value<T>(initial: T): Value<T> {
 			const hook: DirtyHook = {
 				onDirty: callback,
 				close() {
-					hooks = hooks.filter((x) => x !== hook);
+					hooks = hooks.filter(x => x !== hook);
 				},
 			};
 			return hook;
@@ -60,7 +60,7 @@ export function derived<Output>(
 			const hook: DirtyHook = {
 				onDirty,
 				close() {
-					hooks = hooks.filter((x) => x !== hook);
+					hooks = hooks.filter(x => x !== hook);
 				},
 			};
 			return hook;
@@ -85,9 +85,8 @@ export function derived<Output>(
 			name,
 			phase,
 			impl: async () => {
-				return await evaluate(async (sig) => {
-					if (dependencies.some(([_, s]) => s === sig))
-						return sig.valueInternal;
+				return await evaluate(async sig => {
+					if (dependencies.some(([_, s]) => s === sig)) return sig.valueInternal;
 
 					const hook = sig.hook(signal.markDirty);
 

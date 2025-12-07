@@ -1,3 +1,3 @@
 export function formatHello(name: string) {
-	return `Hello, ${name}`;
+	return "Hello, " + name;
 }

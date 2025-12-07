@@ -4,12 +4,7 @@ import { platform } from "node:process";
 import type { Cache } from "../compiler/cache";
 
 export function getLuauDownloadURL() {
-	let platformId =
-		platform === "win32"
-			? "windows"
-			: platform === "darwin"
-				? "macos"
-				: "ubuntu";
+	let platformId = platform === "win32" ? "windows" : platform === "darwin" ? "macos" : "ubuntu";
 
 	return `https://github.com/luau-lang/luau/releases/download/0.697/luau-${platformId}.zip`;
 }
@@ -18,9 +13,7 @@ export async function downloadLuau(cache: Cache): Promise<string> {
 	const url = getLuauDownloadURL();
 	const artifactId = "luau-" + Bun.hash(url).toString(36) + ".zip";
 	const path = cache.artifactPath(artifactId);
-	const extractedPath = cache.artifactPath(
-		"luau-" + Bun.hash(url).toString(36),
-	);
+	const extractedPath = cache.artifactPath("luau-" + Bun.hash(url).toString(36));
 	let dirExists = false;
 
 	try {

@@ -21,17 +21,28 @@ export type LuauAnalysisType =
 			type: "imported_module";
 			origin: "script" | "game";
 			path: string[];
+	  }
+	| {
+			type: "const_str";
+			value: string;
+	  }
+	| {
+			type: "imported_module_path";
+			path: string;
 	  };
 
-export function evaluateExpressionType(
-	expr: Luau.Expression,
-): LuauAnalysisType {
+export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType {
 	if (expr.type === "AstExprGlobal") {
 		if (expr.global === "require") return { type: "require" };
-		if (expr.global === "game")
-			return { type: "datamodel", path: [], origin: "game" };
-		if (expr.global === "script")
-			return { type: "datamodel", path: [], origin: "script" };
+		if (expr.global === "game") return { type: "datamodel", path: [], origin: "game" };
+		if (expr.global === "script") return { type: "datamodel", path: [], origin: "script" };
+	}
+
+	if (expr.type === "AstExprConstantString") {
+		return {
+			type: "const_str",
+			value: expr.value,
+		};
 	}
 
 	if (expr.type === "AstExprIndexName") {
@@ -57,6 +68,11 @@ export function evaluateExpressionType(
 					...module,
 					type: "imported_module",
 				};
+			} else if (module.type === "const_str") {
+				return {
+					type: "imported_module_path",
+					path: module.value,
+				};
 			}
 		}
 	}
@@ -64,10 +80,7 @@ export function evaluateExpressionType(
 	return { type: "unknown" };
 }
 
-async function _analyzeImports(
-	source: string,
-	cache: Cache,
-): Promise<ImportInfo[]> {
+async function _analyzeImports(source: string, cache: Cache): Promise<ImportInfo[]> {
 	const ast = await parseLuauDocument(source, cache);
 	const imports: ImportInfo[] = [];
 
@@ -93,10 +106,7 @@ async function _analyzeImports(
 	return imports;
 }
 
-export async function analyzeImports(
-	source: string,
-	cache: Cache,
-): Promise<ImportInfo[]> {
+export async function analyzeImports(source: string, cache: Cache): Promise<ImportInfo[]> {
 	return action({
 		id: "luau:analyze_imports",
 		name: "Analyze file imports",

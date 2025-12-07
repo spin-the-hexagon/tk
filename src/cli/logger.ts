@@ -1,24 +1,16 @@
 import chalk, { type ChalkInstance } from "chalk";
-import {
-	type SchedulerBlock,
-	getSchedulerPhaseOrdinal,
-	getSchedulerPhaseText,
-} from "../scheduler/scheduler";
+import { type SchedulerBlock, getSchedulerPhaseOrdinal, getSchedulerPhaseText } from "../scheduler/scheduler";
 import { getTerminalWidth } from "../utils/get-width";
 
 let lastLineWritten: undefined | string = undefined;
 
 export function showSchedulerBlockState(block: SchedulerBlock) {
-	const completedTasks = block.tasks.filter((x) => x.done).length;
+	const completedTasks = block.tasks.filter(x => x.done).length;
 	const totalTasks = block.tasks.length;
 	const progress = completedTasks / totalTasks;
 	const task = block.tasks
-		.filter((x) => !x.done)
-		.toSorted(
-			(a, b) =>
-				getSchedulerPhaseOrdinal(a.phase) -
-				getSchedulerPhaseOrdinal(b.phase),
-		)[0];
+		.filter(x => !x.done)
+		.toSorted((a, b) => getSchedulerPhaseOrdinal(a.phase) - getSchedulerPhaseOrdinal(b.phase))[0];
 	let rightStr = `${chalk.magenta(completedTasks)}/${totalTasks}`;
 
 	// if (task) {
@@ -57,9 +49,7 @@ export function showSchedulerBlockState(block: SchedulerBlock) {
 
 	text += rightStr;
 
-	Bun.stdout.write(
-		`${lastLineWritten === "scheduler_block" ? "\r" : ""}${text}`,
-	);
+	Bun.stdout.write(`${lastLineWritten === "scheduler_block" ? "\r" : ""}${text}`);
 
 	lastLineWritten = "scheduler_block";
 }
@@ -82,11 +72,7 @@ export function showBlockCompletedLine(block: SchedulerBlock) {
 
 export function logger(type: string, color: ChalkInstance) {
 	return function (...args: any[]) {
-		const formatted = args
-			.map((x) =>
-				typeof x === "string" ? x : Bun.inspect(x, { colors: true }),
-			)
-			.join(" ");
+		const formatted = args.map(x => (typeof x === "string" ? x : Bun.inspect(x, { colors: true }))).join(" ");
 		let prefix = color(type.padStart(8) + ": ");
 
 		for (const line of formatted.split("\n")) {

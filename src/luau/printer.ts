@@ -194,5 +194,13 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 		AstTypePackVariadic: printer(), // FIXME: For the sake of my sanity, we aren't printing types
 		AstTypeReference: printer(), // FIXME: For the sake of my sanity, we aren't printing types
 		AstLocal: printer("$name"),
+		AstStatInline: {
+			print(cp, node) {
+				for (const segment of node.body) {
+					cp.newline();
+					cp.printNode(segment);
+				}
+			},
+		},
 	});
 }

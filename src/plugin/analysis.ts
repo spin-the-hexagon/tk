@@ -6,7 +6,7 @@ export const ImportInfoSchema = v.union([
 		type: v.literal("classic"),
 		path: v.array(v.string()),
 		origin: v.union([v.literal("script"), v.literal("game")]),
-		location: v.string() as v.BaseSchema<Luau.Location, Luau.Location, any>,
+		location: v.optional(v.string()) as v.BaseSchema<Luau.Location | undefined, Luau.Location | undefined, any>,
 	}),
 	v.object({
 		type: v.literal("absolute-path"),

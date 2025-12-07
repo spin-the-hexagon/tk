@@ -43,10 +43,7 @@ export function pluginLuau(): PluginMetadata {
 		],
 		async analyze(file, cache) {
 			return {
-				imports: await analyzeImports(
-					await fs.readText(file.path),
-					cache,
-				),
+				imports: await analyzeImports(await fs.readText(file.path), cache),
 			};
 		},
 		async transform(props) {

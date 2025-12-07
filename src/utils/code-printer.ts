@@ -1,17 +1,9 @@
 import type { Luau } from "../luau/ast";
-import {
-	createPartialLocationTagFromLuauLocation,
-	getLocationTag,
-	type PartialLocationTag,
-} from "./sourcemap";
+import { createPartialLocationTagFromLuauLocation, getLocationTag, type PartialLocationTag } from "./sourcemap";
 import { unreachable } from "./unreachable";
 
 export function isAlphanumeric(char: string) {
-	return (
-		(char >= "a" && char <= "z") ||
-		(char >= "A" && char <= "Z") ||
-		(char >= "0" && char <= "9")
-	);
+	return (char >= "a" && char <= "z") || (char >= "A" && char <= "Z") || (char >= "0" && char <= "9");
 }
 
 export class CodePrinter {
@@ -43,10 +35,7 @@ export class CodePrinter {
 	}
 
 	push(text: string) {
-		if (
-			isAlphanumeric(text[0]!) &&
-			isAlphanumeric([...this.segments.join("")].at(-1)!)
-		) {
+		if (isAlphanumeric(text[0]!) && isAlphanumeric([...this.segments.join("")].at(-1)!)) {
 			this.segments.push(" ");
 		}
 		this.segments.push(text);
@@ -102,9 +91,7 @@ export class CodePrinter {
 		const printer = this.nodePrinters[node.type];
 
 		if (!printer) {
-			throw new Error(
-				`No printer found for node type ${node.type}. This is a bug in TK.`,
-			);
+			throw new Error(`No printer found for node type ${node.type}. This is a bug in TK.`);
 		}
 
 		let startTag: PartialLocationTag | undefined;
@@ -112,10 +99,7 @@ export class CodePrinter {
 
 		if ("location" in node && typeof node.location === "string") {
 			const luauLocation = node.location as Luau.Location;
-			let [nStartTag, nEndTag] = createPartialLocationTagFromLuauLocation(
-				luauLocation,
-				this.sourceFile,
-			);
+			let [nStartTag, nEndTag] = createPartialLocationTagFromLuauLocation(luauLocation, this.sourceFile);
 			startTag = nStartTag;
 			endTag = nEndTag;
 		}
@@ -162,9 +146,7 @@ export type KeysOfType<T, KeyType> = {
 	[K in keyof T]: T[K] extends KeyType ? K : never;
 }[keyof T];
 
-export function printer<Node>(
-	...segments: NodePrinterSegment<Node>[]
-): NodePrinter<Node> {
+export function printer<Node>(...segments: NodePrinterSegment<Node>[]): NodePrinter<Node> {
 	return {
 		print(cp, node) {
 			for (const segment of segments) {
@@ -182,9 +164,7 @@ export function printer<Node>(
 					const child = node[rest];
 
 					if (typeof child !== "string") {
-						throw new Error(
-							`Node child is not a string. This is a bug in tk.`,
-						);
+						throw new Error(`Node child is not a string. This is a bug in tk.`);
 					}
 
 					cp.push(child);
@@ -194,17 +174,9 @@ export function printer<Node>(
 					segment.startsWith("lines:")
 				) {
 					const preface = segment.split(":")[0]!;
-					const rest = segment.slice(
-						preface.length + 1,
-					) as keyof Node & string;
+					const rest = segment.slice(preface.length + 1) as keyof Node & string;
 					const joiner =
-						segment === "comma"
-							? ","
-							: segment === "semi"
-								? ";"
-								: segment === "lines"
-									? "\n"
-									: "";
+						segment === "comma" ? "," : segment === "semi" ? ";" : segment === "lines" ? "\n" : "";
 					const children = node[rest] as any;
 
 					let writeJoiner = false;

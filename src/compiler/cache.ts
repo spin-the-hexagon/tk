@@ -34,10 +34,7 @@ export class Cache {
 
 	async loadFromFS() {
 		try {
-			this.entries.push(
-				...(TOML.parse(await Bun.file(this.tomlPath).text())
-					.entries as any[]),
-			);
+			this.entries.push(...(TOML.parse(await Bun.file(this.tomlPath).text()).entries as any[]));
 		} catch {}
 	}
 
@@ -58,9 +55,9 @@ export class Cache {
 		this.entries.push(entry);
 	}
 
-	query<Schema extends BaseSchema<any, any, any>>(
-		schema: Schema,
-	): InferOutput<Schema> | null {
+	query<Schema extends BaseSchema<any, any, any>>(schema: Schema): InferOutput<Schema> | null {
+		if (true) return null;
+
 		for (const entry of this.entries) {
 			const parsed = safeParse<Schema>(schema, entry);
 			if (parsed.success) {

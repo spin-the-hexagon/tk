@@ -17,10 +17,7 @@ const locationTagRegistry: LocationTag[] = [];
 
 export function getLocationTag(location: PartialLocationTag) {
 	const existing = locationTagRegistry.find(
-		(x) =>
-			x.file === location.file &&
-			x.line === location.line &&
-			x.col === location.col,
+		x => x.file === location.file && x.line === location.line && x.col === location.col,
 	);
 
 	if (existing) return existing;
@@ -72,10 +69,7 @@ export function decodeCodeString(str: string): CodeString {
 	return result;
 }
 
-export function createPartialLocationTagFromPartialLuauLocation(
-	part: string,
-	file: string,
-): PartialLocationTag {
+export function createPartialLocationTagFromPartialLuauLocation(part: string, file: string): PartialLocationTag {
 	const [line, idx] = part.split(",");
 
 	return {

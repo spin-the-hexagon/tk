@@ -94,12 +94,10 @@ export async function scanFiles({
 }
 
 export function getDataModelPath(files: FileEntry[], fsPath: string): string[] {
-	const entry = files.find((x) => x.path === fsPath);
+	const entry = files.find(x => x.path === fsPath);
 
 	if (!entry) {
-		throw new Error(
-			`Failed to find file at path ${fsPath} in entry table!`,
-		);
+		throw new Error(`Failed to find file at path ${fsPath} in entry table!`);
 	}
 
 	return entry.dataModelPath;

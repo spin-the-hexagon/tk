@@ -3,6 +3,7 @@ import type {
 	Expression,
 	IdentifierName,
 	IdentifierReference,
+	PrivateIdentifier,
 	Statement,
 	StringLiteral,
 } from "oxc-parser";
@@ -17,12 +18,26 @@ export class TypescriptTranspiler {
 	private _activeBlock: Luau.BlockStatement | undefined;
 	usedSymbols: Set<string> = new Set();
 	moduleId = this.getSymbolName("module");
+	libs: Record<string, string> = {};
+
+	getLib(id: string): string {
+		if (this.libs[id]) return this.libs[id];
+
+		this.libs[id] ??= this.getSymbolName(`lib_${id}`);
+
+		return this.libs[id]!;
+	}
 
 	addPrelude() {
 		this.pushStatement(lu.defineLocal(this.moduleId, { type: "AstExprTable", items: [] }));
 	}
 
 	addPostlude() {
+		for (const lib in this.libs) {
+			this.activeBlock.body.unshift(
+				lu.defineLocal(this.libs[lib]!, lu.call(lu.global("require"), false, lu.str(`virtual:${lib}`))),
+			);
+		}
 		this.pushStatement(lu.return(lu.getLocal(this.moduleId)));
 	}
 
@@ -254,9 +269,32 @@ export class TypescriptTranspiler {
 			.otherwise(stat => TODO(stat.type));
 	}
 
+	getExprValue(property: Expression | IdentifierName | PrivateIdentifier) {
+		if (property.type === "Identifier") {
+			return lu.str(property.name);
+		}
+		if (property.type === "PrivateIdentifier") {
+			TODO("PrivateIdentifier in getExprValue");
+		}
+		return this.translateExpression(property);
+	}
+
 	translateExpression(expr: Expression): Luau.Expression {
 		return match(expr)
 			.returnType<Luau.Expression>()
+			.with({ type: "CallExpression", callee: { type: "MemberExpression" } }, expr =>
+				lu.call(
+					lu.index(lu.getLocal(this.getLib("core")), lu.str("call")),
+					false,
+					this.translateExpression(expr.callee.object),
+					this.getExprValue(expr.callee.property),
+					...expr.arguments.map(arg =>
+						arg.type === "SpreadElement"
+							? TODO("SpreadElement in CallExpression")
+							: this.translateExpression(arg),
+					),
+				),
+			)
 			.with({ type: "CallExpression" }, expr =>
 				lu.call(
 					this.translateExpression(expr.callee),
@@ -275,11 +313,19 @@ export class TypescriptTranspiler {
 			.with({ type: "BinaryExpression" }, expr => {
 				if (expr.left.type === "PrivateIdentifier") TODO("V8 weirdness");
 
+				if (expr.operator === "+") {
+					return lu.call(
+						lu.index(lu.getLocal(this.getLib("core")), lu.str("plus")),
+						false,
+						this.translateExpression(expr.left),
+						this.translateExpression(expr.right),
+					);
+				}
+
 				return lu.binary(
 					match(expr.operator)
 						.returnType<Luau.BinaryOp>()
 						.with("!=", () => "CompareNe")
-						.with("+", () => "Concat") // FIXME: This isn't alwyas applicable
 						.otherwise(it => TODO(`BinaryExpr ${it}`)),
 					this.translateExpression(expr.left),
 					this.translateExpression(expr.right),

@@ -11,7 +11,7 @@ tkpack.moduleTable = {}
 tkpack.includedModules = {}
 tkpack.moduleReturns = {}
 
-function tkpack.indexOf(array: {any}, item: any)
+function tkpack.indexOf(array: { any }, item: any)
 	for real, index in array do
 		if item == real then
 			return index

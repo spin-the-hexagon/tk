@@ -124,4 +124,14 @@ export const lu = {
 			values: [right],
 		});
 	},
+	tuple(...items: Luau.Expression[]) {
+		return withLocateUtils<Luau.TableExpression>({
+			type: "AstExprTable",
+			items: items.map(x => ({
+				type: "AstExprTableItem",
+				kind: "item",
+				value: x,
+			})),
+		});
+	},
 };

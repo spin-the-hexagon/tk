@@ -56,6 +56,7 @@ export class Cache {
 	}
 
 	query<Schema extends BaseSchema<any, any, any>>(schema: Schema): InferOutput<Schema> | null {
+		if (process.argv.includes("--no-cache")) return null;
 		for (const entry of this.entries) {
 			const parsed = safeParse<Schema>(schema, entry);
 			if (parsed.success) {

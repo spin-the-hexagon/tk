@@ -1,3 +1,3 @@
-import { formatHello } from "../shared/formatHello";
+import * as mod from "../shared/formatHello";
 
-print(formatHello("world"));
+print(mod.formatHello("world"));

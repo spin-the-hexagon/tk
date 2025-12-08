@@ -7,11 +7,12 @@ import { action } from "../scheduler/action";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { fs } from "../utils/fastfs";
+import { decodeCodeString, type CodeString } from "../utils/sourcemap";
+import { unreachable } from "../utils/unreachable";
 import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
-import { decodeCodeString, type CodeString } from "../utils/sourcemap";
-import { unreachable } from "../utils/unreachable";
+import { typescriptRuntimeLibs } from "../typescript/runlimelibs/listing";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
 export class Bundle {
@@ -25,6 +26,20 @@ export class Bundle {
 		this.cache = props.cache;
 		this.allEntries = props.allEntries;
 		this.files = props.files;
+
+		// Add corelibs
+		for (const lib in typescriptRuntimeLibs) {
+			const src = (typescriptRuntimeLibs as Record<string, string>)[lib]!;
+
+			this.files.push({
+				dataModelPath: ["virtual", lib],
+				path: `virtual:${lib}`,
+				type: "code",
+				mode: "module",
+				pluginId: "luau",
+				forceSrc: src,
+			});
+		}
 	}
 
 	addFilePath(path: string) {
@@ -110,7 +125,7 @@ export class Bundle {
 			cp.gap();
 
 			// Step 1: Generate lua code with plugin (bleh)
-			let src = await fs.readText(file.path);
+			let src = file.forceSrc ?? (await fs.readText(file.path));
 
 			const plugin = findPlugin(this.plugins, file.pluginId);
 
@@ -148,8 +163,6 @@ export class Bundle {
 				files: this.allEntries,
 				filePath: file.path,
 			});
-
-			debug(ast.root);
 
 			cp.printNode(ast.root);
 

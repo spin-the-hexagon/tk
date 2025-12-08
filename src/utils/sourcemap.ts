@@ -13,7 +13,7 @@ export type LocationTag = {
 
 export type PartialLocationTag = Omit<LocationTag, "id">;
 
-const locationTagRegistry: LocationTag[] = [];
+export const locationTagRegistry: LocationTag[] = [];
 
 export function getLocationTag(location: PartialLocationTag) {
 	const existing = locationTagRegistry.find(

@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { command, optional, positional } from "cmd-ts";
+import { command, flag, optional, positional } from "cmd-ts";
 import { Directory } from "cmd-ts/batteries/fs";
 import { resolve } from "node:path";
 import { DevServer } from "../compiler/dev-server";
@@ -9,6 +9,7 @@ import { startRunLoop } from "../scheduler/scheduler";
 export const dev = command({
 	args: {
 		path: positional({ type: optional(Directory) }),
+		noCache: flag({ long: "no-cache" }),
 	},
 	name: "dev",
 	description: "Start the development server",

@@ -11,6 +11,7 @@ export type CodeFileEntry = {
 	type: "code";
 	mode: "module" | "client" | "server";
 	pluginId: string;
+	forceSrc?: string;
 };
 
 export type FileEntry =

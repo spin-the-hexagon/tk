@@ -1,5 +1,10 @@
 import type { Luau } from "../luau/ast";
-import { createPartialLocationTagFromLuauLocation, getLocationTag, type PartialLocationTag } from "./sourcemap";
+import {
+	createPartialLocationTagFromLuauLocation,
+	getLocationTag,
+	locationTagRegistry,
+	type PartialLocationTag,
+} from "./sourcemap";
 import { unreachable } from "./unreachable";
 
 export function isAlphanumeric(char: string) {
@@ -16,7 +21,7 @@ export class CodePrinter {
 	sourceFile = ""; // Required to create proper source tags for Luau printing
 
 	get text() {
-		return this.segments.join("");
+		return this.segments.filter(x => !locationTagRegistry.find(y => y.id === x)).join("");
 	}
 
 	addIndent() {
@@ -135,7 +140,7 @@ export interface NodePrinter<T> {
 export type NodePrinterSegment<T> =
 	| (string & {})
 	| `@${KeysOfType<T, { type: string } | undefined> & string}`
-	| `${"comma" | "semi"}:${KeysOfType<T, { type: string }[]> & string}`
+	| `${"comma" | "semi" | "lines"}:${KeysOfType<T, { type: string }[]> & string}`
 	| `$${KeysOfType<T, string> & string}`
 	| "!"
 	| "'indent"
@@ -176,7 +181,7 @@ export function printer<Node>(...segments: NodePrinterSegment<Node>[]): NodePrin
 					const preface = segment.split(":")[0]!;
 					const rest = segment.slice(preface.length + 1) as keyof Node & string;
 					const joiner =
-						segment === "comma" ? "," : segment === "semi" ? ";" : segment === "lines" ? "\n" : "";
+						preface === "comma" ? "," : preface === "semi" ? ";" : preface === "lines" ? "\n" : "";
 					const children = node[rest] as any;
 
 					let writeJoiner = false;

@@ -9,7 +9,6 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 		AstExprCall: printer("@func", "(", "comma:args", ")"),
 		AstExprFunction: {
 			print(cp, node) {
-				printer("function", "(", "comma:args", ")", "@body");
 				cp.push("function");
 				cp.push("(");
 				let comma = false;
@@ -45,6 +44,9 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 					case "Not":
 						cp.push("~");
 						break;
+					case "Len":
+						cp.push("#");
+						break;
 					default:
 						unreachable(node.op);
 				}
@@ -74,6 +76,9 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 						break;
 					case "Or":
 						cp.push("||");
+						break;
+					case "Add":
+						cp.push("+");
 						break;
 					default:
 						unreachable(node.op);
@@ -189,7 +194,7 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 				cp.printNode(node.body);
 			},
 		},
-		AstStatReturn: printer("return", "comma:list"),
+		AstStatReturn: printer("return", "!", "comma:list"),
 		AstStatFunction: printer("@name", "=", "@func"), // FIXME: SPEC BREAK: Due to our current printing architecture, we write an equivalent. The name belongs inside of the function
 		AstTypePackVariadic: printer(), // FIXME: For the sake of my sanity, we aren't printing types
 		AstTypeReference: printer(), // FIXME: For the sake of my sanity, we aren't printing types

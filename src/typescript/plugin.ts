@@ -1,7 +1,7 @@
 import { resolveSync } from "bun";
 import { join } from "node:path";
 import { parse } from "oxc-parser";
-import { debug, warn } from "../cli/logger";
+import { warn } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry } from "../compiler/scan-files";
 import { TK_VERSION } from "../constants";
@@ -35,7 +35,7 @@ export function pluginTypescript(): PluginMetadata {
 			},
 		],
 		async analyze(file: CodeFileEntry, cache: Cache): Promise<Analysis> {
-			const src = await fs.readText(file.path);
+			const src = await fs.readText(file.forceSrc ?? file.path);
 			const transpiler = new Bun.Transpiler({
 				loader: "tsx",
 			});
@@ -59,7 +59,6 @@ export function pluginTypescript(): PluginMetadata {
 		async transform(props: PluginTransformProps): Promise<PluginTransformResult> {
 			const parsed = await parse(props.path, props.src);
 			const program = parsed.program;
-			debug(program);
 			const transpiler = new TypescriptTranspiler();
 			const topLevelBlock = lu.block([]);
 			using _ab = transpiler.blockContext(topLevelBlock);

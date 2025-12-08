@@ -1,12 +1,16 @@
-import { resolve } from "node:path";
+import { ResolverFactory } from "oxc-resolver";
 import { walk } from "zimmerframe";
-import { debug } from "../cli/logger";
+import { debug, warn } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import type { FileEntry } from "../compiler/scan-files";
 import { action } from "../scheduler/action";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
 import type { Luau } from "./ast";
+
+const resolver = new ResolverFactory({
+	extensions: [".js", ".ts", ".luau", ".lua", ".mjs", ".mts"],
+});
 
 async function _transpileToTKPack({
 	ast,
@@ -65,7 +69,17 @@ async function _transpileToTKPack({
 						},
 					];
 				} else if (returnType.type === "imported_module_path") {
-					const resolvedPath = resolve(filePath, returnType.path);
+					let resolvedPath = returnType.path;
+
+					const resolveResult = resolver.resolveFileSync(filePath, resolvedPath);
+
+					if (resolveResult.path) {
+						resolvedPath = resolveResult.path;
+					} else {
+						if (!resolvedPath.startsWith("virtual:")) {
+							warn(`Failed to resolve ${resolvedPath}`, resolveResult);
+						}
+					}
 					const file = files.find(x => x.path === resolvedPath);
 
 					if (!file) {

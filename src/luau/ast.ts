@@ -159,7 +159,7 @@ export namespace Luau {
 	export interface UnaryExpression {
 		type: "AstExprUnary";
 		location?: Location;
-		op: "Not";
+		op: "Not" | "Len";
 		expr: Expression;
 	}
 
@@ -204,7 +204,7 @@ export namespace Luau {
 		right: Expression;
 	}
 
-	export type BinaryOp = "CompareEq" | "CompareNe" | "Or" | "And" | "Concat";
+	export type BinaryOp = "CompareEq" | "CompareNe" | "Or" | "And" | "Concat" | "Add";
 
 	export interface ContinueStatement {
 		type: "AstStatContinue";

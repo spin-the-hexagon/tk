@@ -5,17 +5,17 @@
 	"private": true,
 	"version": "0.0.5",
 	"devDependencies": {
+		"@changesets/cli": "^2.29.8",
 		"@types/bun": "latest",
-		"prettier": "^3.6.2",
-		"prettier-plugin-organize-imports": "^4.3.0",
-		"@changesets/cli": "^2.29.8"
+		"oxfmt": "^0.17.0",
+		"prettier-plugin-organize-imports": "^4.3.0"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"scripts": {
 		"start": "bun run ./src/index.ts",
-		"fmt": "prettier . -w && stylua src/",
+		"fmt": "oxfmt . && stylua src/",
 		"change": "bun run --bun changeset",
 		"version": "bun run --bun changeset version",
 		"make-natives-linux": "bun build --compile --target=bun-linux-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",

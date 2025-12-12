@@ -3,9 +3,15 @@ import { basename } from "node:path";
 export function nameSegments(path: string): [string, string] {
 	const name = basename(path);
 
-	const [base, ...exts] = name.split(".");
+	const segments = name.split(".");
 
-	return [base ?? "", exts.join(".")];
+	let extStart = Math.max(segments.length - 1, 1);
+
+	while (segments[extStart] === "client" || segments[extStart] === "server") {
+		extStart--;
+	}
+
+	return [segments.slice(0, extStart).join("."), segments.slice(extStart).join(".")];
 }
 
 export function extName(path: string) {

@@ -15,6 +15,11 @@ export type LuauAnalysisType =
 			path: string[];
 	  }
 	| {
+			type: "get_child_funct";
+			origin: "script" | "game";
+			path: string[];
+	  }
+	| {
 			type: "unknown";
 	  }
 	| {
@@ -49,11 +54,35 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 		const innerType = evaluateExpressionType(expr.expr);
 
 		if (innerType.type === "datamodel") {
+			if (expr.index === "WaitForChild") {
+				return {
+					type: "get_child_funct",
+					origin: innerType.origin,
+					path: innerType.path,
+				};
+			}
+
 			return {
 				type: "datamodel",
 				origin: innerType.origin,
 				path: [...innerType.path, expr.index],
 			};
+		}
+	}
+
+	if (expr.type === "AstExprIndexExpr") {
+		const innerType = evaluateExpressionType(expr.expr);
+
+		if (innerType.type === "datamodel") {
+			const indexType = evaluateExpressionType(expr.index);
+
+			if (indexType.type === "const_str") {
+				return {
+					type: "datamodel",
+					origin: innerType.origin,
+					path: [...innerType.path, indexType.value],
+				};
+			}
 		}
 	}
 
@@ -72,6 +101,18 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 				return {
 					type: "imported_module_path",
 					path: module.value,
+				};
+			}
+		}
+
+		if (funcType.type === "get_child_funct" && expr.args.length === 1) {
+			const index = evaluateExpressionType(expr.args[0]!);
+
+			if (index.type === "const_str") {
+				return {
+					type: "datamodel",
+					origin: funcType.origin,
+					path: [...funcType.path, index.value],
 				};
 			}
 		}

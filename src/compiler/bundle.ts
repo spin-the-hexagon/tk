@@ -1,9 +1,12 @@
 import { basename } from "node:path";
-import { debug, warn } from "../cli/logger";
+import { warn } from "../cli/logger";
+import type { Luau } from "../luau/ast";
 import { integrateLuauPrinter } from "../luau/printer";
 import { transpileToTKPack } from "../luau/tkpack-transpile";
 import { findPlugin, type PluginMetadata } from "../plugin/schema";
 import { action } from "../scheduler/action";
+import { waitForEventLoop } from "../scheduler/scheduler";
+import { typescriptRuntimeLibs } from "../typescript/runlimelibs/listing";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { fs } from "../utils/fastfs";
@@ -12,8 +15,26 @@ import { unreachable } from "../utils/unreachable";
 import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
-import { typescriptRuntimeLibs } from "../typescript/runlimelibs/listing";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
+
+function printAst(node: Luau.BlockStatement, cache: Cache) {
+	return action({
+		name: "Print AST",
+		id: "bundler:print_ast",
+		args: [node] as const,
+		phase: "build",
+		cache,
+		async impl(node) {
+			const cp = new CodePrinter();
+
+			integrateLuauPrinter(cp);
+
+			cp.printNode(node);
+
+			return cp.text;
+		},
+	});
+}
 
 export class Bundle {
 	files: CodeFileEntry[];
@@ -99,7 +120,6 @@ export class Bundle {
 
 					p++;
 				}
-				debug(self.files);
 			},
 		});
 	}
@@ -118,6 +138,10 @@ export class Bundle {
 
 		cp.add(tkpack);
 
+		integrateLuauPrinter(cp);
+
+		const cache = this.cache;
+
 		for (const file of this.files) {
 			cp.gap();
 			cp.comment(file.path);
@@ -129,10 +153,6 @@ export class Bundle {
 
 			const plugin = findPlugin(this.plugins, file.pluginId);
 
-			integrateLuauPrinter(cp);
-
-			const cache = this.cache;
-
 			const { ast } = await action({
 				name: `Transpile ${basename(file.path)} with ${plugin.id}`,
 				id: `${plugin.id}:transpile_to_luau`,
@@ -143,7 +163,7 @@ export class Bundle {
 						src,
 					},
 				],
-				cache: cache,
+				cache,
 				phase: "build",
 				async impl() {
 					return await plugin.transform({
@@ -156,7 +176,7 @@ export class Bundle {
 			});
 
 			// Step 2: Run it through the transpiler to turn require statements into tkpack.import :3
-			await transpileToTKPack({
+			ast.root = await transpileToTKPack({
 				ast,
 				cache,
 				pathDM: file.dataModelPath,
@@ -164,17 +184,17 @@ export class Bundle {
 				filePath: file.path,
 			});
 
-			cp.printNode(ast.root);
+			cp.add(await printAst(ast.root, this.cache));
 
 			cp.gap();
 			cp.add("end)()");
+
+			await waitForEventLoop();
 		}
 
 		for (const entrypoint of this.files.filter(x => x.mode !== "module")) {
 			cp.add(`tkpack.include(${cp.escapeString(entrypoint.dataModelPath.join("."))});`);
 		}
-
-		debug(cp.text);
 
 		return cp.text;
 	}
@@ -190,6 +210,7 @@ export class Bundle {
 			},
 			phase: "build",
 		});
-		return decodeCodeString(str);
+		const cs = decodeCodeString(str);
+		return cs;
 	}
 }

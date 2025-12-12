@@ -1,8 +1,9 @@
 import type { Luau } from "../luau/ast";
 import {
+	codeStringToRawText,
 	createPartialLocationTagFromLuauLocation,
+	decodeCodeString,
 	getLocationTag,
-	locationTagRegistry,
 	type PartialLocationTag,
 } from "./sourcemap";
 import { unreachable } from "./unreachable";
@@ -14,14 +15,14 @@ export function isAlphanumeric(char: string) {
 export class CodePrinter {
 	mode: "lua" | "ts" = "lua";
 	indent = 0;
-	segments: string[] = [];
+	private segments: string[] = [];
+	private raw = "";
 	gapWasJustWritten = false;
-	whitespaceWasJustWritten = false;
 	nodePrinters: Record<string, NodePrinter<any>> = {};
 	sourceFile = ""; // Required to create proper source tags for Luau printing
 
 	get text() {
-		return this.segments.filter(x => !locationTagRegistry.find(y => y.id === x)).join("");
+		return this.segments.join("");
 	}
 
 	addIndent() {
@@ -40,38 +41,45 @@ export class CodePrinter {
 	}
 
 	push(text: string) {
-		if (isAlphanumeric(text[0]!) && isAlphanumeric([...this.segments.join("")].at(-1)!)) {
-			this.segments.push(" ");
+		if (isAlphanumeric(text[0]!)) {
+			this.whitespace();
 		}
 		this.segments.push(text);
+		if (!text.includes("<::")) {
+			this.raw += text; // fastpath
+		} else {
+			this.raw += codeStringToRawText(decodeCodeString(text));
+		}
 		this.gapWasJustWritten = false;
-		this.whitespaceWasJustWritten = false;
+
+		if (this.segments.length > 2000) {
+			this.segments = [this.segments.join("")];
+		}
+	}
+
+	whitespace() {
+		if (isAlphanumeric(this.raw[this.raw.length - 1]!)) {
+			this.segments.push(" ");
+			this.raw += " ";
+		}
 	}
 
 	add(text: string) {
 		const indentation = "   ".repeat(this.indent);
 
 		for (const line of text.split("\n")) {
-			this.segments.push(`${indentation}${line}\n`);
+			this.push(`${indentation}${line}\n`);
 		}
 
 		this.gapWasJustWritten = false;
-		this.whitespaceWasJustWritten = false;
 	}
 
 	gap() {
 		if (this.gapWasJustWritten) return;
 
 		this.gapWasJustWritten = true;
-		this.whitespaceWasJustWritten = true;
 
-		this.segments.push("\n");
-	}
-
-	whitespace() {
-		if (this.whitespaceWasJustWritten) return;
-		this.whitespaceWasJustWritten = true;
-		this.segments.push(" ");
+		this.push("\n");
 	}
 
 	comment(...text: string[]) {
@@ -96,7 +104,9 @@ export class CodePrinter {
 		const printer = this.nodePrinters[node.type];
 
 		if (!printer) {
-			throw new Error(`No printer found for node type ${node.type}. This is a bug in TK.`);
+			throw new Error(
+				`No printer found for node type ${node.type}. This is a bug in TK. Node looks like: ${JSON.stringify(node)}`,
+			);
 		}
 
 		let startTag: PartialLocationTag | undefined;
@@ -145,7 +155,8 @@ export type NodePrinterSegment<T> =
 	| "!"
 	| "'indent"
 	| "'undent"
-	| "'line";
+	| "'line"
+	| NodePrinter<T>;
 
 export type KeysOfType<T, KeyType> = {
 	[K in keyof T]: T[K] extends KeyType ? K : never;
@@ -155,7 +166,9 @@ export function printer<Node>(...segments: NodePrinterSegment<Node>[]): NodePrin
 	return {
 		print(cp, node) {
 			for (const segment of segments) {
-				if (segment === "!") {
+				if (typeof segment === "object" && "print" in segment) {
+					segment.print(cp, node);
+				} else if (segment === "!") {
 					cp.whitespace();
 				} else if (segment.startsWith("@")) {
 					const rest = segment.slice(1) as keyof Node & string;
@@ -207,6 +220,21 @@ export function printer<Node>(...segments: NodePrinterSegment<Node>[]): NodePrin
 				} else {
 					cp.push(segment);
 				}
+			}
+		},
+	};
+}
+
+export function when<Node>(
+	condition: ((node: Node) => boolean) | (KeysOfType<Node, boolean> & string),
+	...segments: NodePrinterSegment<Node>[]
+): NodePrinter<Node> {
+	const core = printer(...segments);
+
+	return {
+		print(cp, node) {
+			if (typeof condition === "string" ? node[condition] : condition(node)) {
+				core.print(cp, node);
 			}
 		},
 	};

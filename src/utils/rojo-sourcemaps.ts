@@ -48,7 +48,7 @@ export function createSourcemapFromFiles({
 	};
 
 	for (const file of files) {
-		const node = getSourcemapNode(root, file.dataModelPath);
+		const node = getSourcemapNode(root, file.dataModelPath.slice(1));
 
 		if (file.type === "code") {
 			node.className = {

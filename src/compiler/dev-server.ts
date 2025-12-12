@@ -1,15 +1,25 @@
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, join, resolve } from "node:path";
+import { warn } from "../cli/logger";
 import type { Config } from "../config/schema";
 import { isExperimentEnabled } from "../config/utils";
 import { pluginLuau } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
-import { waitForEventLoop } from "../scheduler/scheduler";
+import { wait } from "../scheduler/scheduler";
+import { SyncServer } from "../sync/server";
 import { pluginTypescript } from "../typescript/plugin";
 import { fs } from "../utils/fastfs";
 import { createSourcemapFromFiles } from "../utils/rojo-sourcemaps";
+import { codeStringToRawText } from "../utils/sourcemap";
+import { TODO } from "../utils/todo";
 import { Bundle } from "./bundle";
 import { Cache, cacheFileName } from "./cache";
 import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
+
+export interface BundledItem {
+	path: string;
+	src: string;
+}
 
 export class DevServer {
 	path: string;
@@ -17,12 +27,15 @@ export class DevServer {
 	isUpdateQueued = false;
 	cache: Cache;
 	plugins: PluginMetadata[] = [];
+	server: SyncServer;
 
 	constructor(opts: { path: string; config: Config }) {
 		fs.addWatchPath(opts.path);
 		fs.addOnUpdate(() => {
 			this.isUpdateQueued = true;
 		});
+
+		this.server = new SyncServer(this);
 
 		this.path = resolve(opts.path);
 		this.config = opts.config;
@@ -47,9 +60,9 @@ export class DevServer {
 	async updateLoop() {
 		await this.init();
 		while (true) {
-			await waitForEventLoop();
+			await wait(100);
 			if (this.isUpdateQueued) {
-				this.isUpdateQueued = false;
+				//this.isUpdateQueued = false;
 				await this.update();
 			}
 		}
@@ -57,15 +70,18 @@ export class DevServer {
 
 	async scanFiles() {
 		const index: Promise<FileEntry[]>[] = [];
+
 		for (const portal of this.config.portals ?? []) {
 			index.push(
 				scanFiles({
 					path: resolve(this.path, portal.project),
 					robloxPath: portal.roblox.split("."),
 					plugins: this.plugins,
+					external: portal.external,
 				}),
 			);
 		}
+
 		const entries = (await Promise.all(index)).flat();
 
 		return entries;
@@ -75,6 +91,29 @@ export class DevServer {
 		const entries = await this.scanFiles();
 
 		const entrypoints = entries.filter(x => x.type === "code" && x.mode !== "module") as CodeFileEntry[];
+
+		if (this.config.type === "plugin") {
+			if (entrypoints.length > 0) {
+				warn(
+					`Plugins cannot have client or server scripts, thus the files ${entrypoints.map(x => basename(x.path)).join(", ")} are being ignored.`,
+				);
+			}
+
+			entrypoints.splice(0);
+
+			const entryPath = this.config.entry;
+			const entry = entries.find(x => x.path === resolve(this.path, entryPath) && x.type === "code") as
+				| CodeFileEntry
+				| undefined;
+
+			if (!entry) {
+				warn(`Failed to find a file with path ${resolve(this.path, entryPath)}, thus there is no entrypoint`);
+			} else {
+				entrypoints.push(entry);
+			}
+		}
+
+		const bundles: BundledItem[] = [];
 
 		for (const entry of entrypoints) {
 			const bundle = new Bundle({
@@ -87,6 +126,15 @@ export class DevServer {
 			await bundle.sweep();
 
 			const code = await bundle.generateText();
+
+			bundles.push({
+				path: entry.path,
+				src: codeStringToRawText(code),
+			});
+		}
+
+		if (this.config.type === "plugin") {
+			await this.savePlugin(bundles);
 		}
 
 		// Update sourcemap
@@ -96,6 +144,18 @@ export class DevServer {
 			projectPath: this.path,
 		});
 
-		await Bun.write(resolve(this.path, "sourcemap.json"), JSON.stringify(sourcemap));
+		Bun.write(resolve(this.path, "sourcemap.json"), JSON.stringify(sourcemap));
+	}
+
+	async savePlugin(bundles: BundledItem[]) {
+		if (bundles.length !== 1) throw new Error(`Incorrect number of bundles. Expected 1, got ${bundles.length}`);
+		const coreBundle = bundles[0]!;
+		const src = coreBundle.src;
+		if (process.platform !== "win32") {
+			TODO(process.platform);
+		}
+		const robloxPath = join(homedir(), "AppData", "Local", "Roblox", "Plugins", `${this.config.name}.luau`);
+
+		await Bun.write(robloxPath, src);
 	}
 }

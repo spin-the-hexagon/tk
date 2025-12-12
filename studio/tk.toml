@@ -1,0 +1,13 @@
+name = "tkStudio"
+version = 0
+type = "plugin"
+entry = "src/index.luau"
+
+[[portals]]
+project = "./src/"
+roblox = "game.TK"
+
+[[portals]]
+project = "./packages"
+roblox = "game.Packages"
+external = true

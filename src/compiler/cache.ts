@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import TOML from "smol-toml";
 import { safeParse, type BaseSchema, type InferOutput } from "valibot";
 import { wait } from "../scheduler/scheduler";
 
@@ -7,11 +6,12 @@ export const cacheFileName = ".tk/cache";
 
 export class Cache {
 	entries: any[] = [];
+	fastCache: Record<string, string> = {};
 	path: string;
 	isDirty = true;
 
-	get tomlPath() {
-		return resolve(this.path, "cache.toml");
+	get jsonPath() {
+		return resolve(this.path, "cache.json");
 	}
 
 	artifactPath(id: string) {
@@ -25,27 +25,27 @@ export class Cache {
 
 	async startSaveLoop() {
 		while (true) {
+			await wait(1000);
 			if (!this.isDirty) continue;
 			this.isDirty = false;
-			await wait(1000);
 			await this.saveToFS();
 		}
 	}
 
 	async loadFromFS() {
 		try {
-			this.entries.push(...(TOML.parse(await Bun.file(this.tomlPath).text()).entries as any[]));
-		} catch {}
+			const document = JSON.parse(await Bun.file(this.jsonPath).text());
+			this.entries.push(...document.entries);
+			this.fastCache = document.fast;
+		} catch (err) {}
 	}
 
 	async saveToFS() {
-		while (this.entries.length > 200) {
-			this.entries.shift();
-		}
 		await Bun.write(
-			this.tomlPath,
-			TOML.stringify({
+			this.jsonPath,
+			JSON.stringify({
 				entries: this.entries,
+				fast: this.fastCache,
 			}),
 		);
 	}

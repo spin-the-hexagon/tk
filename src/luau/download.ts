@@ -1,7 +1,10 @@
-import AdmZip from "adm-zip";
-import { mkdir, readdir } from "node:fs/promises";
+import extract from "extract-zip";
+import { mkdir } from "node:fs/promises";
+import { resolve } from "node:path";
 import { platform } from "node:process";
+import { debug } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
+import { action } from "../scheduler/action";
 
 export function getLuauDownloadURL() {
 	let platformId = platform === "win32" ? "windows" : platform === "darwin" ? "macos" : "ubuntu";
@@ -11,26 +14,30 @@ export function getLuauDownloadURL() {
 
 export async function downloadLuau(cache: Cache): Promise<string> {
 	const url = getLuauDownloadURL();
-	const artifactId = "luau-" + Bun.hash(url).toString(36) + ".zip";
-	const path = cache.artifactPath(artifactId);
-	const extractedPath = cache.artifactPath("luau-" + Bun.hash(url).toString(36));
-	let dirExists = false;
+	return action({
+		name: "Download Luau",
+		id: "luau:download",
+		args: [url],
+		cache,
+		async impl(): Promise<string> {
+			const extractedPath = cache.artifactPath("luau-" + Bun.hash(url).toString(36));
 
-	try {
-		await readdir(extractedPath);
-		dirExists = true;
-	} catch {}
+			if (!(await Bun.file(resolve(extractedPath, "luau-ast.exe")).exists())) {
+				const response = await fetch(url);
 
-	if (!dirExists) {
-		const response = await fetch(url);
-		await Bun.write(path, response);
+				await mkdir(extractedPath, { recursive: true });
 
-		const zip = new AdmZip(path);
+				const filePath = resolve(extractedPath, "data.zip");
 
-		await mkdir(extractedPath, { recursive: true });
+				const bytes = await response.bytes();
 
-		zip.extractAllTo(extractedPath);
-	}
+				await Bun.write(filePath, bytes);
 
-	return extractedPath;
+				await extract(filePath, { dir: extractedPath });
+			}
+
+			return extractedPath;
+		},
+		phase: "download",
+	});
 }

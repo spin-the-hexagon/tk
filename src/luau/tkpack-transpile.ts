@@ -1,6 +1,6 @@
 import { ResolverFactory } from "oxc-resolver";
 import { walk } from "zimmerframe";
-import { debug, warn } from "../cli/logger";
+import { warn } from "../cli/logger";
 import type { Cache } from "../compiler/cache";
 import type { FileEntry } from "../compiler/scan-files";
 import { action } from "../scheduler/action";
@@ -24,9 +24,11 @@ async function _transpileToTKPack({
 	pathDM: string[];
 	filePath: string;
 	files: FileEntry[];
-}): Promise<Luau.Document> {
+}): Promise<Luau.BlockStatement> {
+	const rootClone = structuredClone(ast.root);
+
 	walk(
-		ast.root as Luau.Node,
+		rootClone as Luau.Node,
 		{},
 		{
 			AstExprCall(node) {
@@ -83,7 +85,7 @@ async function _transpileToTKPack({
 					const file = files.find(x => x.path === resolvedPath);
 
 					if (!file) {
-						debug(`Failed to find data-model of path ${resolvedPath}`);
+						warn(`Failed to find data-model of path ${resolvedPath}`);
 						return;
 					}
 
@@ -118,7 +120,7 @@ async function _transpileToTKPack({
 		},
 	);
 
-	return ast;
+	return rootClone;
 }
 
 export async function transpileToTKPack({
@@ -133,7 +135,7 @@ export async function transpileToTKPack({
 	pathDM: string[];
 	filePath: string;
 	files: FileEntry[];
-}): Promise<Luau.Document> {
+}): Promise<Luau.BlockStatement> {
 	return await action({
 		name: `Transpile ${pathDM.join(".")} to TKPack`,
 		id: "tkpack:transpile",

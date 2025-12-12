@@ -14,15 +14,21 @@ export type LocationTag = {
 export type PartialLocationTag = Omit<LocationTag, "id">;
 
 export const locationTagRegistry: LocationTag[] = [];
+export const quickmap: Record<string, LocationTag> = {};
+export const idToLocTag: Record<string, LocationTag> = {};
+
+let locCounter = 0;
+const idBodyLength = 5;
+const idSize = idBodyLength + 6;
 
 export function getLocationTag(location: PartialLocationTag) {
-	const existing = locationTagRegistry.find(
-		x => x.file === location.file && x.line === location.line && x.col === location.col,
-	);
+	const key = `${location.file}:${location.line}:${location.col}`;
+
+	const existing = quickmap[key];
 
 	if (existing) return existing;
 
-	const id = `<::${crypto.randomUUID()}::>`;
+	const id = `<::${(locCounter++).toString(36).padStart(idBodyLength, "0")}::>`;
 	const full = {
 		...location,
 		id,
@@ -30,7 +36,23 @@ export function getLocationTag(location: PartialLocationTag) {
 
 	locationTagRegistry.push(full);
 
+	quickmap[key] = full;
+	idToLocTag[id] = full;
+
 	return full;
+}
+
+export function codeStringToRawText(codestring: CodeString): string {
+	let result = "";
+
+	for (const segment of codestring) {
+		if (typeof segment === "string") {
+			result += segment;
+			continue;
+		}
+	}
+
+	return result;
 }
 
 export function encodeCodeString(codestring: CodeString): string {
@@ -50,20 +72,29 @@ export function encodeCodeString(codestring: CodeString): string {
 
 export function decodeCodeString(str: string): CodeString {
 	let result: CodeString = [];
+	let append = "";
 
-	outer: for (let i = 0; i < str.length; i++) {
-		for (const locTag of locationTagRegistry) {
-			if (str.slice(i).startsWith(locTag.id)) {
+	for (let i = 0; i < str.length; i++) {
+		if (str[i] === "<" && str[i + 1] === ":") {
+			const idIfReal = str.slice(i, i + idSize);
+			const locTag = idToLocTag[idIfReal];
+			if (locTag) {
+				if (append) {
+					result.push(append);
+					append = "";
+				}
 				result.push(locTag);
-				i += locTag.id.length - 1;
-				continue outer;
+				i += idSize - 1;
+				continue;
 			}
-		}
-		if (typeof result.at(-1) === "string") {
-			result[result.length - 1] += str[i]!;
 		} else {
-			result.push(str[i]!);
+			append += str[i];
 		}
+	}
+
+	if (append) {
+		result.push(append);
+		append = "";
 	}
 
 	return result;

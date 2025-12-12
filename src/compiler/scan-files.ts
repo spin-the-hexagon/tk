@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
+import { createPortalsFromProjectNode, type ProjectJSON } from "../config/project";
 import type { PluginMetadata } from "../plugin/schema";
 import { schedulePromise } from "../scheduler/scheduler";
 import { resolveDataModelPath } from "../utils/datamodel";
@@ -26,9 +27,11 @@ export async function scanFiles({
 	path,
 	robloxPath,
 	plugins,
+	external = false,
 }: {
 	path: string;
 	robloxPath: string[];
+	external?: boolean;
 	plugins: PluginMetadata[];
 }): Promise<FileEntry[]> {
 	const type = await fs.getType(path);
@@ -38,6 +41,7 @@ export async function scanFiles({
 			for (const fmt of plug.fileFormats) {
 				if (fmt.type !== "code") continue;
 				if (!path.endsWith(fmt.extension)) continue;
+				if (fmt.mode !== "module" && external) continue;
 				return [
 					{
 						dataModelPath: resolveDataModelPath(robloxPath),
@@ -62,24 +66,54 @@ export async function scanFiles({
 	const children = await fs.readDir(path);
 	const promises: Promise<FileEntry[]>[] = [];
 
-	for (const child of children) {
-		promises.push(
-			schedulePromise({
-				impl() {
-					const childPath = resolve(path, child);
-					const main = mainName(childPath);
-					const toAdd = main === "init" ? [] : [main];
+	if (children.includes("default.project.json")) {
+		const loaded: ProjectJSON = await Bun.file(resolve(path, "default.project.json")).json();
+		const portals = createPortalsFromProjectNode({
+			dataModelPath: robloxPath,
+			node: loaded.tree,
+			originPath: path,
+		});
 
-					return scanFiles({
-						plugins,
-						path: childPath,
-						robloxPath: [...robloxPath, ...toAdd],
-					});
-				},
-				name: `Index ${path}`,
-				phase: "index",
-			}),
-		);
+		for (const portal of portals) {
+			promises.push(
+				schedulePromise({
+					impl() {
+						const childPath = portal.project;
+
+						return scanFiles({
+							plugins,
+							path: childPath,
+							robloxPath: portal.roblox,
+							external,
+						});
+					},
+					name: `Index Portal ${path}`,
+					phase: "index",
+				}),
+			);
+		}
+	} else {
+		for (const child of children) {
+			promises.push(
+				schedulePromise({
+					async impl() {
+						const childPath = resolve(path, child);
+						const main =
+							(await fs.getType(childPath)) === "file" ? mainName(childPath) : basename(childPath);
+						const toAdd = main === "init" || main === "index" ? [] : [main];
+
+						return scanFiles({
+							plugins,
+							path: childPath,
+							robloxPath: [...robloxPath, ...toAdd],
+							external,
+						});
+					},
+					name: `Index ${path}`,
+					phase: "index",
+				}),
+			);
+		}
 	}
 
 	const descendants = (await Promise.all(promises)).flat();

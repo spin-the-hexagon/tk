@@ -1,30 +1,45 @@
-import { printer, type CodePrinter } from "../utils/code-printer";
+import { match } from "ts-pattern";
+import { printer, when, type CodePrinter } from "../utils/code-printer";
 import { unreachable } from "../utils/unreachable";
 import type { Luau } from "./ast";
+
+function binaryOpToText(op: Luau.BinaryOp) {
+	return match(op)
+		.with("Add", () => "+")
+		.with("Sub", () => "-")
+		.with("Div", () => "/")
+		.with("Mul", () => "*")
+		.with("Mod", () => "%")
+		.with("CompareEq", () => "==")
+		.with("CompareGe", () => ">=")
+		.with("CompareLe", () => "<=")
+		.with("CompareNe", () => "~=")
+		.with("CompareGt", () => ">")
+		.with("CompareLt", () => "<")
+		.with("And", () => "and")
+		.with("Concat", () => "..")
+		.with("Or", () => "or")
+		.exhaustive();
+}
 
 export function integrateLuauPrinter(codeprinter: CodePrinter) {
 	codeprinter.integratePrinters<Luau.Node>({
 		AstExprIndexName: printer("@expr", "$op", "$index"),
 		AstExprGlobal: printer("$global"),
 		AstExprCall: printer("@func", "(", "comma:args", ")"),
-		AstExprFunction: {
-			print(cp, node) {
-				cp.push("function");
-				cp.push("(");
-				let comma = false;
-				for (const arg of node.args) {
-					if (comma) cp.push(",");
-					comma = true;
-					cp.printNode(arg);
-				}
-				if (node.vararg) {
-					if (comma) cp.push(",");
-					cp.push("...");
-				}
-				cp.push(")");
-				cp.printNode(node.body);
-			},
-		},
+		AstExprFunction: printer(
+			"function",
+			"(",
+			"comma:args",
+			")",
+			when(
+				"vararg",
+				when(it => it.args.length > 0, ","),
+				"...",
+			),
+			")",
+			"@body",
+		),
 		AstExprLocal: printer("@local"),
 		AstExprTable: printer("{", "comma:items", "}"),
 		AstExprTableItem: {
@@ -38,6 +53,7 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 				}
 			},
 		},
+		AstStatBreak: printer("break"),
 		AstExprUnary: {
 			print(cp, node) {
 				switch (node.op) {
@@ -46,6 +62,9 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 						break;
 					case "Len":
 						cp.push("#");
+						break;
+					case "Minus":
+						cp.push("-");
 						break;
 					default:
 						unreachable(node.op);
@@ -61,31 +80,18 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 				cp.push("(");
 				cp.printNode(node.left);
 				cp.push(")");
-				switch (node.op) {
-					case "And":
-						cp.push("&&");
-						break;
-					case "CompareEq":
-						cp.push("==");
-						break;
-					case "CompareNe":
-						cp.push("~=");
-						break;
-					case "Concat":
-						cp.push("..");
-						break;
-					case "Or":
-						cp.push("||");
-						break;
-					case "Add":
-						cp.push("+");
-						break;
-					default:
-						unreachable(node.op);
-				}
+				cp.push(binaryOpToText(node.op));
 				cp.push("(");
 				cp.printNode(node.right);
 				cp.push(")");
+			},
+		},
+		AstStatCompoundAssign: {
+			print(cp, node) {
+				cp.printNode(node.var);
+				cp.push(binaryOpToText(node.op));
+				cp.push("=");
+				cp.printNode(node.value);
 			},
 		},
 		AstExprConstantString: {
@@ -105,107 +111,51 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			},
 		},
 		AstExprVarargs: printer("..."),
-		AstStatBlock: {
-			print(cp, node) {
-				cp.addIndent();
-				for (const segment of node.body) {
-					cp.newline();
-					cp.printNode(segment);
-				}
-				cp.unindent();
-				cp.newline();
-				if (node.hasEnd) {
-					cp.push("end");
-				}
-			},
-		},
-		AstStatLocal: printer("local", "comma:vars", "=", "comma:values"),
-		AstStatIf: {
-			print(cp, node) {
-				cp.push("if");
-				cp.printNode(node.condition);
-				cp.push("then");
-				cp.printNode(node.thenbody);
-				if (node.elsebody) {
-					cp.push("else");
-					cp.printNode(node.elsebody);
-				}
-			},
-		},
+		AstStatBlock: printer("'indent", "lines:body", "'undent", when("hasEnd", "end")),
+		AstStatLocal: printer(
+			"local",
+			"comma:vars",
+			when(it => it.values.length > 0, "="),
+			"comma:values",
+		),
+		AstStatIf: printer(
+			"if",
+			"@condition",
+			"then",
+			when(it => it.elsebody !== undefined, "else", "@elsebody"),
+		),
+		AstExprIfElse: printer(
+			"if",
+			"@condition",
+			when("hasThen", "then", "@trueExpr"),
+			when("hasElse", "else", "@falseExpr"),
+		),
 		AstStatLocalFunction: printer("local", "@name", "=", "@func"), // FIXME: SPEC BREAK: Due to our current printing architecture, we write an equivalent. The name belongs inside of the function
-		AstStatForIn: {
-			print(cp, node) {
-				cp.push("for");
-				let comma = false;
-				for (const varr of node.vars) {
-					if (comma) {
-						cp.push(",");
-					}
-					comma = true;
-					cp.printNode(varr);
-				}
-				if (node.hasIn) {
-					//FIXME: does this ever even equal false, in what case would you have an 'in'less for-in
-					cp.push("in");
-				}
-				comma = false;
-				for (const val of node.values) {
-					if (comma) {
-						cp.push(",");
-					}
-					comma = true;
-					cp.printNode(val);
-				}
-				if (node.hasDo) {
-					cp.push("do");
-				}
-				cp.printNode(node.body);
-			},
-		},
-		AstStatFor: {
-			print(cp, node) {
-				// this is the numeric case
-				cp.push("for");
-				cp.printNode(node.var);
-				cp.push("=");
-				cp.printNode(node.from);
-				cp.push(",");
-				cp.printNode(node.to);
-				if (node.step) {
-					cp.push(",");
-					cp.printNode(node.step);
-				}
-				if (node.hasDo) {
-					cp.push("do");
-				}
-				cp.printNode(node.body);
-			},
-		},
+		AstStatForIn: printer("for", "comma:vars", when("hasIn", "in"), "comma:values", when("hasDo", "do"), "@body"),
+		AstStatFor: printer(
+			"for",
+			"@var",
+			"=",
+			"@from",
+			",",
+			"@to",
+			when(it => it.step !== undefined, ",", "@step"),
+			when("hasDo", "do"),
+			"@body",
+		),
 		AstStatExpr: printer("@expr"),
 		AstStatAssign: printer("comma:vars", "=", "comma:values"),
 		AstStatContinue: printer("continue"),
-		AstStatWhile: {
-			print(cp, node) {
-				cp.push("while");
-				cp.printNode(node.condition);
-				if (node.hasDo) {
-					cp.push("do");
-				}
-				cp.printNode(node.body);
-			},
-		},
+		AstStatWhile: printer("while", "@condition", when("hasDo", "do"), "@body"),
 		AstStatReturn: printer("return", "!", "comma:list"),
 		AstStatFunction: printer("@name", "=", "@func"), // FIXME: SPEC BREAK: Due to our current printing architecture, we write an equivalent. The name belongs inside of the function
 		AstTypePackVariadic: printer(), // FIXME: For the sake of my sanity, we aren't printing types
 		AstTypeReference: printer(), // FIXME: For the sake of my sanity, we aren't printing types
+		AstStatTypeAlias: printer(), // FIXME: For the sake of my sanity, we aren't printing types
+		AstExprTypeAssertion: printer("@expr"), // FIXME: For the sake of my sanity, we aren't printing types
 		AstLocal: printer("$name"),
-		AstStatInline: {
-			print(cp, node) {
-				for (const segment of node.body) {
-					cp.newline();
-					cp.printNode(segment);
-				}
-			},
-		},
+		AstStatInline: printer("lines:body"),
+		AstExprGroup: printer("(", "@expr", ")"),
+		AstStatRepeat: printer("repeat", "@body", "until", "@condition"),
 	});
 }

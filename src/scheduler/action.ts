@@ -1,4 +1,3 @@
-import * as v from "valibot";
 import type { Cache } from "../compiler/cache";
 import { schedulePromise, type SchedulerPhase } from "./scheduler";
 
@@ -10,19 +9,18 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 	impl(...args: ArgsType): Promise<PromiseType>;
 	phase: SchedulerPhase;
 }): Promise<PromiseType> {
-	const argsHash = Bun.hash(JSON.stringify(props.args)).toString(36);
+	const argsHash = Bun.hash(
+		JSON.stringify({
+			args: props.args,
+			id: props.id,
+		}),
+	).toString(36);
 
 	if (props.cache) {
-		const result = props.cache.query(
-			v.object({
-				type: v.literal(props.id),
-				argsHash: v.literal(argsHash),
-				result: v.string(),
-			}),
-		);
+		const result = props.cache.fastCache[argsHash];
 
 		if (result) {
-			return JSON.parse(result.result);
+			return JSON.parse(result);
 		}
 	}
 
@@ -31,11 +29,10 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 		phase: props.phase,
 		async impl() {
 			const result = await props.impl(...props.args);
-			props.cache?.save({
-				type: props.id,
-				argsHash,
-				result: JSON.stringify(result),
-			});
+			if (props.cache) {
+				props.cache.fastCache[argsHash] = JSON.stringify(result);
+				props.cache.isDirty = true;
+			}
 			return result;
 		},
 	});

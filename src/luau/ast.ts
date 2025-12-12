@@ -24,7 +24,11 @@ export namespace Luau {
 		| WhileStatement
 		| ReturnStatement
 		| FunctionStatement
-		| InlineStatement;
+		| InlineStatement
+		| TypeAliasStatement
+		| CompoundAssignStatement
+		| BreakStatement
+		| RepeatStatement;
 
 	export type Expression =
 		| IndexNameExpression
@@ -40,7 +44,40 @@ export namespace Luau {
 		| ConstantBooleanExpression
 		| ConstantNilExpression
 		| ConstantNumberExpression
-		| VarargsExpression;
+		| VarargsExpression
+		| IfElseExpression
+		| TypeAssertionExpression
+		| GroupExpression;
+
+	export interface BreakStatement {
+		type: "AstStatBreak";
+		location?: Location;
+	}
+
+	export interface RepeatStatement {
+		type: "AstStatRepeat";
+		condition: Expression;
+		body: BlockStatement;
+	}
+
+	export interface CompoundAssignStatement {
+		type: "AstStatCompoundAssign";
+		var: Expression;
+		value: Expression;
+		op: BinaryOp;
+		location?: Location;
+	}
+
+	export interface GroupExpression {
+		type: "AstExprGroup";
+		expr: Expression;
+	}
+
+	export interface TypeAssertionExpression {
+		type: "AstExprTypeAssertion";
+		expr: Expression;
+		annotation: Type;
+	}
 
 	export interface InlineStatement {
 		// Spec break, just makes some things easier
@@ -124,6 +161,16 @@ export namespace Luau {
 		local: Local;
 	}
 
+	export interface IfElseExpression {
+		type: "AstExprIfElse";
+		condition: Expression;
+		hasThen: boolean;
+		trueExpr: Expression;
+		hasElse: boolean;
+		falseExpr: Expression;
+		location?: Location;
+	}
+
 	export interface LocalFunctionStatement {
 		type: "AstStatLocalFunction";
 		location?: Location;
@@ -159,7 +206,7 @@ export namespace Luau {
 	export interface UnaryExpression {
 		type: "AstExprUnary";
 		location?: Location;
-		op: "Not" | "Len";
+		op: "Not" | "Len" | "Minus";
 		expr: Expression;
 	}
 
@@ -180,6 +227,13 @@ export namespace Luau {
 		type: "AstStatExpr";
 		location?: Location;
 		expr: Expression;
+	}
+
+	export interface TypeAliasStatement {
+		type: "AstStatTypeAlias";
+		name: string;
+		nameLocation?: Location;
+		location?: Location;
 	}
 
 	export interface IndexExpressionExpression {
@@ -204,7 +258,21 @@ export namespace Luau {
 		right: Expression;
 	}
 
-	export type BinaryOp = "CompareEq" | "CompareNe" | "Or" | "And" | "Concat" | "Add";
+	export type BinaryOp =
+		| "CompareEq"
+		| "CompareNe"
+		| "Or"
+		| "And"
+		| "Concat"
+		| "Add"
+		| "CompareGe"
+		| "CompareLe"
+		| "CompareGt"
+		| "CompareLt"
+		| "Sub"
+		| "Div"
+		| "Mul"
+		| "Mod";
 
 	export interface ContinueStatement {
 		type: "AstStatContinue";

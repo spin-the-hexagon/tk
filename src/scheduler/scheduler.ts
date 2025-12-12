@@ -1,5 +1,5 @@
-import chalk from "chalk";
-import { showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
+import chalk, { type ChalkInstance } from "chalk";
+import { debug, showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
 import { unreachable } from "../utils/unreachable";
 
 export interface SchedulerBlock {
@@ -38,19 +38,39 @@ export interface SchedulerTask {
 	done: boolean;
 }
 
-export type SchedulerPhase = "index" | "parse" | "mark" | "build" | "commit";
+export type SchedulerPhase = "download" | "index" | "parse" | "mark" | "build" | "commit";
 
 export function getSchedulerPhaseOrdinal(s: SchedulerPhase): number {
-	if (s === "index") {
+	if (s === "download") {
 		return 0;
-	} else if (s === "parse") {
+	} else if (s === "index") {
 		return 1;
-	} else if (s === "mark") {
+	} else if (s === "parse") {
 		return 2;
-	} else if (s === "build") {
+	} else if (s === "mark") {
 		return 3;
-	} else if (s === "commit") {
+	} else if (s === "build") {
 		return 4;
+	} else if (s === "commit") {
+		return 5;
+	}
+
+	unreachable(s);
+}
+
+export function getSchedulerPhaseColor(s: SchedulerPhase): ChalkInstance {
+	if (s === "build") {
+		return chalk.blue;
+	} else if (s === "commit") {
+		return chalk.green;
+	} else if (s === "mark") {
+		return chalk.magenta;
+	} else if (s === "index") {
+		return chalk.yellow;
+	} else if (s === "parse") {
+		return chalk.red;
+	} else if (s === "download") {
+		return chalk.yellow;
 	}
 
 	unreachable(s);
@@ -58,15 +78,17 @@ export function getSchedulerPhaseOrdinal(s: SchedulerPhase): number {
 
 export function getSchedulerPhaseText(s: SchedulerPhase): string {
 	if (s === "build") {
-		return chalk.blue("build");
+		return "build";
 	} else if (s === "commit") {
-		return chalk.green("commit");
+		return "commit";
 	} else if (s === "mark") {
-		return chalk.magenta("mark");
+		return "mark";
 	} else if (s === "index") {
-		return chalk.yellow("index");
+		return "index";
 	} else if (s === "parse") {
-		return chalk.red("parse");
+		return "parse";
+	} else if (s === "download") {
+		return "download";
 	}
 
 	unreachable(s);
@@ -91,11 +113,8 @@ export function block(): SchedulerBlock {
 					await wait();
 				}
 
-				let minPhase = tasks[0]!.phase;
-
 				for (const task of tasks) {
 					if (task.hasBegun) continue;
-					if (task.phase !== minPhase) continue;
 
 					const result = task.exec();
 

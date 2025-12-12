@@ -23,17 +23,20 @@
 		"make-natives-windows": "bun build --compile --target=bun-windows-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
 		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
 		"dev": "bun run --watch ./src/index.ts dev ./example --no-cache",
-		"dev-ts": "bun run --watch ./src/index.ts dev ./example-ts --no-cache"
+		"dev-ts": "bun run --watch ./src/index.ts dev ./example-ts --no-cache",
+		"plugin:dev": "bun run --watch --inspect ./src/index.ts dev ./studio"
 	},
 	"dependencies": {
 		"@johnnymorganz/stylua-bin": "^2.3.1",
 		"@oxc-project/types": "^0.99.0",
 		"@types/adm-zip": "^0.5.7",
-		"adm-zip": "^0.5.16",
 		"chalk": "^5.6.2",
 		"chokidar": "^4.0.3",
 		"cmd-ts": "^0.14.3",
 		"ebnf": "^1.9.1",
+		"extract-zip": "^2.0.1",
+		"figlet": "^1.9.4",
+		"hono": "^4.10.7",
 		"oxc-parser": "^0.99.0",
 		"oxc-resolver": "^11.15.0",
 		"smol-toml": "^1.4.2",
@@ -43,5 +46,6 @@
 	},
 	"trustedDependencies": [
 		"@johnnymorganz/stylua-bin"
-	]
+	],
+	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

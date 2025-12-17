@@ -89,6 +89,7 @@ export namespace Luau {
 		type: "AstStatBlock";
 		location?: Location;
 		hasEnd: boolean;
+		hasDo?: boolean; // SPEC BREAK: Exists to make block recursive printing work
 		body: Statement[];
 	}
 
@@ -149,10 +150,11 @@ export namespace Luau {
 	export interface IfStatement {
 		type: "AstStatIf";
 		location?: Location;
+		hasIf?: boolean; // SPEC BREAK: a thing that only exists for printer
 		hasThen: boolean;
 		condition: Expression;
 		thenbody: BlockStatement;
-		elsebody?: BlockStatement;
+		elsebody?: Statement;
 	}
 
 	export interface LocalExpression {

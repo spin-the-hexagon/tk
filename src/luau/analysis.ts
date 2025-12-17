@@ -36,11 +36,14 @@ export type LuauAnalysisType =
 			path: string;
 	  };
 
+const getChildFuncs = ["WaitForChild", "FindFirstChild"];
+
 export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType {
-	if (expr.type === "AstExprGlobal") {
-		if (expr.global === "require") return { type: "require" };
-		if (expr.global === "game") return { type: "datamodel", path: [], origin: "game" };
-		if (expr.global === "script") return { type: "datamodel", path: [], origin: "script" };
+	if (expr.type === "AstExprGlobal" || expr.type === "AstExprLocal") {
+		const id = expr.type === "AstExprGlobal" ? expr.global : expr.local.name;
+		if (id === "require") return { type: "require" };
+		if (id === "game") return { type: "datamodel", path: [], origin: "game" };
+		if (id === "script") return { type: "datamodel", path: [], origin: "script" };
 	}
 
 	if (expr.type === "AstExprConstantString") {
@@ -54,7 +57,7 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 		const innerType = evaluateExpressionType(expr.expr);
 
 		if (innerType.type === "datamodel") {
-			if (expr.index === "WaitForChild") {
+			if (getChildFuncs.includes(expr.index)) {
 				return {
 					type: "get_child_funct",
 					origin: innerType.origin,
@@ -87,9 +90,13 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 	}
 
 	if (expr.type === "AstExprCall") {
+		if (expr.func.type === "AstExprIndexName" && !getChildFuncs.includes(expr.func.index)) {
+			return { type: "unknown" };
+		}
+
 		const funcType = evaluateExpressionType(expr.func);
 
-		if (funcType.type === "require" && expr.args.length === 1) {
+		if (funcType.type === "require" && expr.args.length >= 1) {
 			const module = evaluateExpressionType(expr.args[0]!);
 
 			if (module.type === "datamodel") {
@@ -105,7 +112,7 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 			}
 		}
 
-		if (funcType.type === "get_child_funct" && expr.args.length === 1) {
+		if (funcType.type === "get_child_funct" && expr.args.length >= 1) {
 			const index = evaluateExpressionType(expr.args[0]!);
 
 			if (index.type === "const_str") {

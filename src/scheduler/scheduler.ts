@@ -1,5 +1,5 @@
 import chalk, { type ChalkInstance } from "chalk";
-import { debug, showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
+import { showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
 import { unreachable } from "../utils/unreachable";
 
 export interface SchedulerBlock {
@@ -35,7 +35,9 @@ export interface SchedulerTask {
 	hasBegun: boolean;
 	name: string;
 	phase: SchedulerPhase;
+	typeId: string;
 	done: boolean;
+	timeTaken: number;
 }
 
 export type SchedulerPhase = "download" | "index" | "parse" | "mark" | "build" | "commit";
@@ -96,7 +98,7 @@ export function getSchedulerPhaseText(s: SchedulerPhase): string {
 
 export function block(): SchedulerBlock {
 	return {
-		begun: performance.now(),
+		begun: 0,
 		tasks: [],
 		async process() {
 			let lastUpdateTime = 0;
@@ -105,6 +107,10 @@ export function block(): SchedulerBlock {
 				const tasks = this.tasks
 					.filter(x => !x.done)
 					.toSorted((a, b) => getSchedulerPhaseOrdinal(a.phase) - getSchedulerPhaseOrdinal(b.phase));
+
+				if (this.begun === 0) {
+					this.begun = performance.now();
+				}
 
 				for (let i = 0; tasks.length === 0; i++) {
 					if (i > 3) {
@@ -116,10 +122,12 @@ export function block(): SchedulerBlock {
 				for (const task of tasks) {
 					if (task.hasBegun) continue;
 
+					const start = Date.now();
 					const result = task.exec();
 
 					result.then(x => {
 						task.done = true;
+						task.timeTaken = Date.now() - start;
 					});
 
 					task.hasBegun = true;
@@ -182,9 +190,11 @@ export function schedulePromise<T>({
 	name,
 	phase,
 	impl,
+	typeId,
 }: {
 	name: string;
 	phase: SchedulerPhase;
+	typeId: string;
 	impl: () => Promise<T>;
 }): Promise<T> {
 	const { promise, resolve, reject } = Promise.withResolvers<T>();
@@ -192,6 +202,8 @@ export function schedulePromise<T>({
 	queue({
 		name,
 		phase,
+		timeTaken: 0,
+		typeId,
 		exec: async () => {
 			try {
 				resolve(await impl());

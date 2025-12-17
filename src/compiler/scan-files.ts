@@ -67,7 +67,7 @@ export async function scanFiles({
 	const promises: Promise<FileEntry[]>[] = [];
 
 	if (children.includes("default.project.json")) {
-		const loaded: ProjectJSON = await Bun.file(resolve(path, "default.project.json")).json();
+		const loaded: ProjectJSON = JSON.parse(await fs.readText(resolve(path, "default.project.json")));
 		const portals = createPortalsFromProjectNode({
 			dataModelPath: robloxPath,
 			node: loaded.tree,
@@ -89,6 +89,7 @@ export async function scanFiles({
 					},
 					name: `Index Portal ${path}`,
 					phase: "index",
+					typeId: "compiler:scan",
 				}),
 			);
 		}
@@ -111,6 +112,7 @@ export async function scanFiles({
 					},
 					name: `Index ${path}`,
 					phase: "index",
+					typeId: "compiler:scan",
 				}),
 			);
 		}

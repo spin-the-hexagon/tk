@@ -10,28 +10,31 @@ import { typescriptRuntimeLibs } from "../typescript/runlimelibs/listing";
 import { CodePrinter } from "../utils/code-printer";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { fs } from "../utils/fastfs";
-import { decodeCodeString, type CodeString } from "../utils/sourcemap";
+import { type CodeString } from "../utils/sourcemap";
 import { unreachable } from "../utils/unreachable";
 import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
+import { debug } from "../cli/logger";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
-function printAst(node: Luau.BlockStatement, cache: Cache) {
+function printAst(node: Luau.BlockStatement, fileName: string, cache: Cache) {
 	return action({
 		name: "Print AST",
 		id: "bundler:print_ast",
-		args: [node] as const,
+		args: [node, fileName] as const,
 		phase: "build",
 		cache,
-		async impl(node) {
+		async impl(node, fileName) {
 			const cp = new CodePrinter();
+
+			cp.sourceFile = fileName;
 
 			integrateLuauPrinter(cp);
 
 			cp.printNode(node);
 
-			return cp.text;
+			return cp.segments;
 		},
 	});
 }
@@ -41,18 +44,26 @@ export class Bundle {
 	allEntries: FileEntry[];
 	plugins: PluginMetadata[];
 	cache: Cache;
+	entrypoints: CodeFileEntry[];
 
-	constructor(props: { plugins: PluginMetadata[]; cache: Cache; allEntries: FileEntry[]; files: CodeFileEntry[] }) {
+	constructor(props: {
+		plugins: PluginMetadata[];
+		cache: Cache;
+		allEntries: FileEntry[];
+		files: CodeFileEntry[];
+		entrypoints: CodeFileEntry[];
+	}) {
 		this.plugins = props.plugins;
 		this.cache = props.cache;
 		this.allEntries = props.allEntries;
 		this.files = props.files;
+		this.entrypoints = props.entrypoints;
 
 		// Add corelibs
 		for (const lib in typescriptRuntimeLibs) {
 			const src = (typescriptRuntimeLibs as Record<string, string>)[lib]!;
 
-			this.files.push({
+			this.allEntries.push({
 				dataModelPath: ["virtual", lib],
 				path: `virtual:${lib}`,
 				type: "code",
@@ -124,7 +135,7 @@ export class Bundle {
 		});
 	}
 
-	private async _generateText(): Promise<string> {
+	private async _generateText(): Promise<CodeString> {
 		const cp = new CodePrinter();
 
 		cp.comment(
@@ -134,8 +145,6 @@ export class Bundle {
 			"https://github.com/spin-the-hexagon/tk",
 		);
 
-		cp.gap();
-
 		cp.add(tkpack);
 
 		integrateLuauPrinter(cp);
@@ -143,10 +152,8 @@ export class Bundle {
 		const cache = this.cache;
 
 		for (const file of this.files) {
-			cp.gap();
 			cp.comment(file.path);
 			cp.add(`tkpack.declare(${cp.escapeString(file.dataModelPath.join("."))},function()`);
-			cp.gap();
 
 			// Step 1: Generate lua code with plugin (bleh)
 			let src = file.forceSrc ?? (await fs.readText(file.path));
@@ -184,19 +191,18 @@ export class Bundle {
 				filePath: file.path,
 			});
 
-			cp.add(await printAst(ast.root, this.cache));
+			cp.segments.push(...(await printAst(ast.root, file.path, this.cache)));
 
-			cp.gap();
-			cp.add("end)()");
+			cp.add("end)");
 
 			await waitForEventLoop();
 		}
 
-		for (const entrypoint of this.files.filter(x => x.mode !== "module")) {
+		for (const entrypoint of this.entrypoints) {
 			cp.add(`tkpack.include(${cp.escapeString(entrypoint.dataModelPath.join("."))});`);
 		}
 
-		return cp.text;
+		return cp.segments;
 	}
 
 	async generateText(): Promise<CodeString> {
@@ -210,7 +216,6 @@ export class Bundle {
 			},
 			phase: "build",
 		});
-		const cs = decodeCodeString(str);
-		return cs;
+		return str;
 	}
 }

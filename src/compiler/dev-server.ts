@@ -5,7 +5,8 @@ import type { Config } from "../config/schema";
 import { isExperimentEnabled } from "../config/utils";
 import { pluginLuau } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
-import { wait } from "../scheduler/scheduler";
+import { printProfileReadout } from "../scheduler/profiler";
+import { getCurrentBlock, wait } from "../scheduler/scheduler";
 import { SyncServer } from "../sync/server";
 import { pluginTypescript } from "../typescript/plugin";
 import { fs } from "../utils/fastfs";
@@ -28,6 +29,7 @@ export class DevServer {
 	cache: Cache;
 	plugins: PluginMetadata[] = [];
 	server: SyncServer;
+	profiles: string[] = [];
 
 	constructor(opts: { path: string; config: Config }) {
 		fs.addWatchPath(opts.path);
@@ -60,9 +62,9 @@ export class DevServer {
 	async updateLoop() {
 		await this.init();
 		while (true) {
-			await wait(100);
+			await wait(3000);
 			if (this.isUpdateQueued) {
-				//this.isUpdateQueued = false;
+				this.isUpdateQueued = false;
 				await this.update();
 			}
 		}
@@ -121,6 +123,7 @@ export class DevServer {
 				allEntries: entries,
 				files: [entry],
 				plugins: this.plugins,
+				entrypoints: [entry],
 			});
 
 			await bundle.sweep();
@@ -145,6 +148,12 @@ export class DevServer {
 		});
 
 		Bun.write(resolve(this.path, "sourcemap.json"), JSON.stringify(sourcemap));
+
+		if (isExperimentEnabled(this.config, "profiling")) {
+			this.profiles.push(printProfileReadout(getCurrentBlock()));
+
+			await Bun.write(resolve(this.path, ".tk", "profile.log"), this.profiles.join("\n\n\n"));
+		}
 	}
 
 	async savePlugin(bundles: BundledItem[]) {
@@ -154,8 +163,9 @@ export class DevServer {
 		if (process.platform !== "win32") {
 			TODO(process.platform);
 		}
-		const robloxPath = join(homedir(), "AppData", "Local", "Roblox", "Plugins", `${this.config.name}.luau`);
+		const robloxPath = join(homedir(), "AppData", "Local", "Roblox", "Plugins", `${this.config.name}.lua`);
 
 		await Bun.write(robloxPath, src);
+		await Bun.write(resolve(this.path, "./test.luau"), src);
 	}
 }

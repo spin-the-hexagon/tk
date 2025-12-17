@@ -16,7 +16,7 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 		}),
 	).toString(36);
 
-	if (props.cache) {
+	if (props.cache && props.cache.enabled) {
 		const result = props.cache.fastCache[argsHash];
 
 		if (result) {
@@ -35,5 +35,6 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 			}
 			return result;
 		},
+		typeId: props.id,
 	});
 }

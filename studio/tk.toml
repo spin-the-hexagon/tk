@@ -11,3 +11,6 @@ roblox = "game.TK"
 project = "./packages"
 roblox = "game.Packages"
 external = true
+
+[experimental]
+profiling = true

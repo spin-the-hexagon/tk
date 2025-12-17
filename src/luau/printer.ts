@@ -1,5 +1,5 @@
 import { match } from "ts-pattern";
-import { printer, when, type CodePrinter } from "../utils/code-printer";
+import { hotpatch, printer, subref, when, type CodePrinter } from "../utils/code-printer";
 import { unreachable } from "../utils/unreachable";
 import type { Luau } from "./ast";
 
@@ -31,7 +31,6 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			"function",
 			"(",
 			"comma:args",
-			")",
 			when(
 				"vararg",
 				when(it => it.args.length > 0, ","),
@@ -47,8 +46,10 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 				if (node.kind === "item") {
 					cp.printNode(node.value);
 				} else if (node.kind === "record" || node.kind === "general") {
+					cp.push("[");
 					cp.printNode(node.key);
-					cp.push(":");
+					cp.push("]");
+					cp.push("=");
 					cp.printNode(node.value);
 				}
 			},
@@ -58,7 +59,7 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			print(cp, node) {
 				switch (node.op) {
 					case "Not":
-						cp.push("~");
+						cp.push("not");
 						break;
 					case "Len":
 						cp.push("#");
@@ -111,7 +112,20 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			},
 		},
 		AstExprVarargs: printer("..."),
-		AstStatBlock: printer("'indent", "lines:body", "'undent", when("hasEnd", "end")),
+		AstStatBlock: printer(
+			when(it => it.hasDo ?? false, "do"),
+			"'indent",
+			hotpatch(it => {
+				for (const child of it.body) {
+					if (child.type == "AstStatBlock") {
+						child.hasDo = true;
+					}
+				}
+			}),
+			"semi:body",
+			"'undent",
+			when("hasEnd", "end"),
+		),
 		AstStatLocal: printer(
 			"local",
 			"comma:vars",
@@ -119,10 +133,24 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			"comma:values",
 		),
 		AstStatIf: printer(
-			"if",
+			when(it => it.hasIf ?? true, "if"),
 			"@condition",
 			"then",
-			when(it => it.elsebody !== undefined, "else", "@elsebody"),
+			hotpatch(it => {
+				if (it.elsebody !== undefined) {
+					it.thenbody.hasEnd = false;
+					if (it.elsebody.type === "AstStatIf") {
+						it.elsebody.hasIf = false;
+					}
+				}
+			}),
+			"@thenbody",
+			when(
+				it => it.elsebody !== undefined,
+				when(it => it.elsebody?.type === "AstStatIf", "elseif"),
+				when(it => it.elsebody?.type !== "AstStatIf", "else"),
+				"@elsebody",
+			),
 		),
 		AstExprIfElse: printer(
 			"if",
@@ -130,7 +158,6 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 			when("hasThen", "then", "@trueExpr"),
 			when("hasElse", "else", "@falseExpr"),
 		),
-		AstStatLocalFunction: printer("local", "@name", "=", "@func"), // FIXME: SPEC BREAK: Due to our current printing architecture, we write an equivalent. The name belongs inside of the function
 		AstStatForIn: printer("for", "comma:vars", when("hasIn", "in"), "comma:values", when("hasDo", "do"), "@body"),
 		AstStatFor: printer(
 			"for",
@@ -147,15 +174,55 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 		AstStatAssign: printer("comma:vars", "=", "comma:values"),
 		AstStatContinue: printer("continue"),
 		AstStatWhile: printer("while", "@condition", when("hasDo", "do"), "@body"),
-		AstStatReturn: printer("return", "!", "comma:list"),
-		AstStatFunction: printer("@name", "=", "@func"), // FIXME: SPEC BREAK: Due to our current printing architecture, we write an equivalent. The name belongs inside of the function
-		AstTypePackVariadic: printer(), // FIXME: For the sake of my sanity, we aren't printing types
+		AstStatReturn: printer("return", "comma:list"),
+		AstStatFunction: printer(
+			"function",
+			"@name",
+			"(",
+			subref("func", "comma:args"),
+			subref(
+				"func",
+				when(
+					"vararg",
+					when(it => it.args.length > 0, ","),
+					"...",
+				),
+			),
+			")",
+			subref("func", "@body"),
+		),
+		AstStatLocalFunction: printer(
+			"local",
+			"function",
+			"@name",
+			"(",
+			subref("func", "comma:args"),
+			subref(
+				"func",
+				when(
+					"vararg",
+					when(it => it.args.length > 0, ","),
+					"...",
+				),
+			),
+			")",
+			subref("func", "@body"),
+		),
+		AstTypePackVariadic: printer("@variadicType"), // FIXME: For the sake of my sanity, we aren't printing types
 		AstTypeReference: printer(), // FIXME: For the sake of my sanity, we aren't printing types
-		AstStatTypeAlias: printer(), // FIXME: For the sake of my sanity, we aren't printing types
+		AstStatTypeAlias: printer('type("not printable... yet")'), // FIXME: For the sake of my sanity, we aren't printing types
 		AstExprTypeAssertion: printer("@expr"), // FIXME: For the sake of my sanity, we aren't printing types
 		AstLocal: printer("$name"),
 		AstStatInline: printer("lines:body"),
 		AstExprGroup: printer("(", "@expr", ")"),
-		AstStatRepeat: printer("repeat", "@body", "until", "@condition"),
+		AstStatRepeat: printer(
+			"repeat",
+			hotpatch(it => {
+				it.body.hasEnd = false;
+			}),
+			"@body",
+			"until",
+			"@condition",
+		),
 	});
 }

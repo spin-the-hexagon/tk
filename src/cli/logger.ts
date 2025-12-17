@@ -44,11 +44,13 @@ export function showSchedulerBlockState(block: SchedulerBlock) {
 export function showBlockCompletedLine(block: SchedulerBlock) {
 	let text = "";
 
-	text += ` ! Executed `;
+	text += ` * Executed `;
 	text += chalk.italic(block.tasks.length);
 	text += ` tasks in `;
 	text += chalk.italic(Math.round(performance.now() - block.begun));
-	text += `ms`;
+	text += `ms (`;
+	text += chalk.italic(((performance.now() - block.begun) / 1000).toFixed(2));
+	text += ` seconds)`;
 
 	const width = getTerminalWidth();
 
@@ -77,3 +79,4 @@ export function logger(type: string, color: ChalkInstance) {
 export const debug = logger("debug", chalk.blue);
 export const warn = logger("warn", chalk.yellow);
 export const info = logger("info", chalk.green);
+export const nfError = logger("error", chalk.red);

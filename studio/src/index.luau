@@ -1,6 +1,8 @@
-local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui");
 local React = require(game.Packages.react);
 local ReactRoblox = require(game.Packages["react-roblox"]);
+
+print("HELLO!!!");
 
 function App()
     return React.createElement("TextLabel", {
@@ -13,6 +15,6 @@ function App()
     })
 end
 
-ReactRoblox.createRoot(Players.LocalPlayer.PlayerGui):render(
+ReactRoblox.createRoot(CoreGui):render(
     React.createElement(App)
 )

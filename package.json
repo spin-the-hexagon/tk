@@ -24,7 +24,7 @@
 		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
 		"dev": "bun run --watch ./src/index.ts dev ./example --no-cache",
 		"dev-ts": "bun run --watch ./src/index.ts dev ./example-ts --no-cache",
-		"plugin:dev": "bun run --watch --inspect ./src/index.ts dev ./studio"
+		"plugin:dev": "bun run --watch --inspect ./src/index.ts dev ./studio --no-cache"
 	},
 	"dependencies": {
 		"@johnnymorganz/stylua-bin": "^2.3.1",

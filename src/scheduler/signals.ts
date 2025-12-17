@@ -95,6 +95,7 @@ export function derived<Output>(
 					return sig.valueInternal;
 				});
 			},
+			typeId: "signal:update",
 		});
 
 		value = Promise.resolve(evaluator);

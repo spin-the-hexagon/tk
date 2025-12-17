@@ -1,4 +1,5 @@
 import { watch } from "chokidar";
+import { debug } from "node:console";
 import { readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 

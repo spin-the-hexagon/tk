@@ -9,6 +9,7 @@ export class Cache {
 	fastCache: Record<string, string> = {};
 	path: string;
 	isDirty = true;
+	enabled = !process.argv.includes("--no-cache");
 
 	get jsonPath() {
 		return resolve(this.path, "cache.json");
@@ -56,7 +57,7 @@ export class Cache {
 	}
 
 	query<Schema extends BaseSchema<any, any, any>>(schema: Schema): InferOutput<Schema> | null {
-		if (process.argv.includes("--no-cache")) return null;
+		if (!this.enabled) return null;
 		for (const entry of this.entries) {
 			const parsed = safeParse<Schema>(schema, entry);
 			if (parsed.success) {

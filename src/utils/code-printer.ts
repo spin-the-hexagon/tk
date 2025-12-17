@@ -2,31 +2,24 @@ import type { Luau } from "../luau/ast";
 import {
 	codeStringToRawText,
 	createPartialLocationTagFromLuauLocation,
-	decodeCodeString,
 	getLocationTag,
+	type CodeString,
 	type PartialLocationTag,
 } from "./sourcemap";
 import { unreachable } from "./unreachable";
 
-export function isAlphanumeric(char: string) {
-	return (char >= "a" && char <= "z") || (char >= "A" && char <= "Z") || (char >= "0" && char <= "9");
-}
-
 export class CodePrinter {
 	mode: "lua" | "ts" = "lua";
-	indent = 0;
-	private segments: string[] = [];
-	private raw = "";
-	gapWasJustWritten = false;
+	segments: CodeString = [];
 	nodePrinters: Record<string, NodePrinter<any>> = {};
-	sourceFile = ""; // Required to create proper source tags for Luau printing
+	sourceFile = "source.lua"; // Required to create proper source tags for Luau printing
 
-	get text() {
-		return this.segments.join("");
+	getRawText() {
+		return codeStringToRawText(this.segments);
 	}
 
 	addIndent() {
-		this.indent++;
+		this.segments.push({ type: "indent" });
 		const unindent = this.unindent;
 
 		return {
@@ -37,49 +30,26 @@ export class CodePrinter {
 	}
 
 	unindent() {
-		this.indent--;
+		this.segments.push({ type: "undent" });
 	}
 
-	push(text: string) {
-		if (isAlphanumeric(text[0]!)) {
-			this.whitespace();
-		}
-		this.segments.push(text);
-		if (!text.includes("<::")) {
-			this.raw += text; // fastpath
-		} else {
-			this.raw += codeStringToRawText(decodeCodeString(text));
-		}
-		this.gapWasJustWritten = false;
+	push(str: string) {
+		this.segments.push(str);
+	}
 
-		if (this.segments.length > 2000) {
-			this.segments = [this.segments.join("")];
-		}
+	semi() {
+		this.segments.push({ type: "semi" });
 	}
 
 	whitespace() {
-		if (isAlphanumeric(this.raw[this.raw.length - 1]!)) {
-			this.segments.push(" ");
-			this.raw += " ";
-		}
+		this.segments.push({ type: "whitespace" });
 	}
 
 	add(text: string) {
-		const indentation = "   ".repeat(this.indent);
-
 		for (const line of text.split("\n")) {
-			this.push(`${indentation}${line}\n`);
+			this.segments.push({ type: "line" });
+			this.push(line);
 		}
-
-		this.gapWasJustWritten = false;
-	}
-
-	gap() {
-		if (this.gapWasJustWritten) return;
-
-		this.gapWasJustWritten = true;
-
-		this.push("\n");
 	}
 
 	comment(...text: string[]) {
@@ -95,7 +65,27 @@ export class CodePrinter {
 			return JSON.stringify(str);
 		}
 		if (this.mode === "lua") {
-			return JSON.stringify(str); // FIXME: this is probably a bad idea, but shush :3
+			let result = "";
+			const quote = '"';
+
+			result += quote;
+
+			const validChars =
+				"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@%^&*()_+-=`{}|[]\\;':\",./<>? ";
+
+			for (const char of str) {
+				if (!validChars.includes(char)) {
+					result += `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`;
+				} else if (char === quote || char === "\\") {
+					result += `\\${char}`;
+				} else {
+					result += char;
+				}
+			}
+
+			result += quote;
+
+			return result;
 		}
 		unreachable(this.mode);
 	}
@@ -125,7 +115,7 @@ export class CodePrinter {
 	}
 
 	locate(tag: PartialLocationTag) {
-		this.segments.push(getLocationTag(tag).id);
+		this.segments.push(getLocationTag(tag));
 	}
 
 	integratePrinters<NodeType extends { type: string }>(props: {
@@ -137,9 +127,7 @@ export class CodePrinter {
 	}
 
 	newline() {
-		this.push("\n");
-		const indentation = "   ".repeat(this.indent);
-		this.push(indentation);
+		this.segments.push({ type: "line" });
 	}
 }
 
@@ -200,10 +188,14 @@ export function printer<Node>(...segments: NodePrinterSegment<Node>[]): NodePrin
 					let writeJoiner = false;
 					for (const child of children) {
 						if (writeJoiner) {
-							if (joiner === "\n") {
-								cp.newline();
-							} else {
+							if (joiner === ";") {
+								cp.semi();
+							} else if (joiner !== "\n") {
 								cp.push(joiner);
+							}
+
+							if (joiner === "\n" || joiner === ";") {
+								cp.newline();
 							}
 						}
 						writeJoiner = true;
@@ -236,6 +228,27 @@ export function when<Node>(
 			if (typeof condition === "string" ? node[condition] : condition(node)) {
 				core.print(cp, node);
 			}
+		},
+	};
+}
+
+export function subref<Node, Subkey extends KeysOfType<Node, { type: string }> & string>(
+	subnode: Subkey,
+	...segments: NodePrinterSegment<Node[Subkey]>[]
+): NodePrinter<Node> {
+	const core = printer(...segments);
+
+	return {
+		print(cp, node) {
+			core.print(cp, node[subnode]!);
+		},
+	};
+}
+
+export function hotpatch<Node>(callback: (node: Node) => void): NodePrinter<Node> {
+	return {
+		print(cp, node) {
+			callback(node);
 		},
 	};
 }

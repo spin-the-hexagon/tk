@@ -25,13 +25,11 @@ async function _transpileToTKPack({
 	filePath: string;
 	files: FileEntry[];
 }): Promise<Luau.BlockStatement> {
-	const rootClone = structuredClone(ast.root);
-
-	walk(
-		rootClone as Luau.Node,
+	const result = walk(
+		ast.root as Luau.Node,
 		{},
 		{
-			AstExprCall(node) {
+			AstExprCall(node, { next }) {
 				const returnType = evaluateExpressionType(node);
 				let path = [...pathDM];
 
@@ -49,7 +47,7 @@ async function _transpileToTKPack({
 					node.func = {
 						type: "AstExprIndexName",
 						location: loc,
-						index: "import",
+						index: "include",
 						indexLocation: loc,
 						op: ".",
 						expr: {
@@ -91,36 +89,43 @@ async function _transpileToTKPack({
 
 					const loc = node.location;
 
-					node.func = {
-						type: "AstExprIndexName",
-						location: loc,
-						index: "import",
-						indexLocation: loc,
-						op: ".",
-						expr: {
-							type: "AstExprLocal",
+					return {
+						type: "AstExprCall",
+						self: false,
+						func: {
+							type: "AstExprIndexName",
 							location: loc,
-							local: {
+							index: "include",
+							indexLocation: loc,
+							op: ".",
+							expr: {
+								type: "AstExprLocal",
 								location: loc,
-								type: "AstLocal",
-								name: "tkpack",
+								local: {
+									location: loc,
+									type: "AstLocal",
+									name: "tkpack",
+								},
 							},
 						},
+						args: [
+							{
+								type: "AstExprConstantString",
+								location: loc,
+								value: file.dataModelPath.join("."),
+							},
+						],
 					};
-
-					node.args = [
-						{
-							type: "AstExprConstantString",
-							location: loc,
-							value: file.dataModelPath.join("."),
-						},
-					];
 				}
+
+				next();
 			},
 		},
-	);
+	) as Luau.BlockStatement;
 
-	return rootClone;
+	result.hasEnd = false;
+
+	return result;
 }
 
 export async function transpileToTKPack({

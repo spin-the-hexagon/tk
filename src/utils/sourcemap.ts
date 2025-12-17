@@ -1,103 +1,83 @@
 import type { Luau } from "../luau/ast";
 
-export type TextSegment = string | LocationTag;
+export type TextControl = { type: "indent" | "undent" | "line" | "semi" | "whitespace" };
+
+export type TextSegment = string | LocationTag | TextControl;
 
 export type CodeString = TextSegment[];
 
 export type LocationTag = {
+	type: "location";
 	id: string;
 	file: string;
 	line: number;
 	col: number;
 };
 
-export type PartialLocationTag = Omit<LocationTag, "id">;
+export const idToTagCache: Record<string, LocationTag> = {};
 
-export const locationTagRegistry: LocationTag[] = [];
-export const quickmap: Record<string, LocationTag> = {};
-export const idToLocTag: Record<string, LocationTag> = {};
+export type PartialLocationTag = Omit<LocationTag, "id" | "type">;
 
-let locCounter = 0;
-const idBodyLength = 5;
-const idSize = idBodyLength + 6;
+const openingTag = "<:$:";
+const closingTag = ":$:>";
 
 export function getLocationTag(location: PartialLocationTag) {
-	const key = `${location.file}:${location.line}:${location.col}`;
-
-	const existing = quickmap[key];
-
-	if (existing) return existing;
-
-	const id = `<::${(locCounter++).toString(36).padStart(idBodyLength, "0")}::>`;
+	const id = `${openingTag}${JSON.stringify(location)}${closingTag}`;
 	const full = {
 		...location,
 		id,
+		type: "location" as const,
 	};
 
-	locationTagRegistry.push(full);
-
-	quickmap[key] = full;
-	idToLocTag[id] = full;
+	idToTagCache[id] = full;
 
 	return full;
 }
 
+//FIXME: This is a bad name. Underscores are not alphanumberic.
+export function isAlphanumeric(char: string) {
+	return (char >= "a" && char <= "z") || (char >= "A" && char <= "Z") || (char >= "0" && char <= "9") || char === "_";
+}
+
+export function isWhitespace(char: string) {
+	return char === " " || char === "\r" || char === "\n" || char === "\t";
+}
+
 export function codeStringToRawText(codestring: CodeString): string {
-	let result = "";
-
+	let text = "";
+	let lastChar = "";
+	let indent = 0;
+	let justWroteWs = true;
 	for (const segment of codestring) {
 		if (typeof segment === "string") {
-			result += segment;
-			continue;
-		}
-	}
-
-	return result;
-}
-
-export function encodeCodeString(codestring: CodeString): string {
-	let result = "";
-
-	for (const segment of codestring) {
-		if (typeof segment === "string") {
-			result += segment;
-			continue;
-		}
-
-		result += getLocationTag(segment);
-	}
-
-	return result;
-}
-
-export function decodeCodeString(str: string): CodeString {
-	let result: CodeString = [];
-	let append = "";
-
-	for (let i = 0; i < str.length; i++) {
-		if (str[i] === "<" && str[i + 1] === ":") {
-			const idIfReal = str.slice(i, i + idSize);
-			const locTag = idToLocTag[idIfReal];
-			if (locTag) {
-				if (append) {
-					result.push(append);
-					append = "";
-				}
-				result.push(locTag);
-				i += idSize - 1;
-				continue;
+			if (segment.length === 0) continue;
+			if (text.length > 0 && isAlphanumeric(segment[0]!) && isAlphanumeric(lastChar)) {
+				text += " ";
 			}
-		} else {
-			append += str[i];
+			lastChar = segment[segment.length - 1]!;
+			text += segment;
+			justWroteWs = false;
+		} else if (segment.type === "line") {
+			text += `\r\n${"    ".repeat(indent)}`;
+		} else if (segment.type === "indent") {
+			indent++;
+		} else if (segment.type === "undent") {
+			indent--;
+		} else if (segment.type === "semi") {
+			if (lastChar !== ";") {
+				text += ";";
+				lastChar = ";";
+				justWroteWs = false;
+			}
+		} else if (segment.type === "whitespace") {
+			if (!justWroteWs) {
+				text += " ";
+				justWroteWs = true;
+			}
 		}
 	}
 
-	if (append) {
-		result.push(append);
-		append = "";
-	}
-
-	return result;
+	return text;
 }
 
 export function createPartialLocationTagFromPartialLuauLocation(part: string, file: string): PartialLocationTag {

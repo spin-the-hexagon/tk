@@ -1,5 +1,11 @@
 # @spin-the-hexagon/tk
 
+## 0.1.0
+
+### Minor Changes
+
+- Introduce sync engine
+
 ## 0.0.5
 
 ### Patch Changes

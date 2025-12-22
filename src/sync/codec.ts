@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-export const BlobEntry = v.union([
+export const BlobEntrySchema = v.union([
 	v.object({
 		type: v.literal("object"),
 		dataModelPath: v.array(v.string()),
@@ -16,7 +16,7 @@ export const BlobEntry = v.union([
 
 export const S2CPushBlobMessage = v.object({
 	type: v.literal("push_blob"),
-	entries: v.array(BlobEntry),
+	entries: v.array(BlobEntrySchema),
 });
 
 export const S2CSetAuthState = v.object({
@@ -38,3 +38,5 @@ export const C2SCode = v.object({
 });
 
 export const C2SSyncMessage = v.union([C2SProceedAuth, C2SCode]);
+
+export type BlobEntry = v.InferOutput<typeof BlobEntrySchema>;

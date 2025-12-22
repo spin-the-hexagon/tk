@@ -1,14 +1,14 @@
 import chalk from "chalk";
 import figlet from "figlet";
 import { Hono, type Context } from "hono";
-import { upgradeWebSocket } from "hono/bun";
+import { upgradeWebSocket, websocket } from "hono/bun";
 import { poweredBy } from "hono/powered-by";
 import type { WSContext, WSEvents } from "hono/ws";
 import { match } from "ts-pattern";
 import * as v from "valibot";
-import { info } from "../cli/logger";
+import { debug, info } from "../cli/logger";
 import type { DevServer } from "../compiler/dev-server";
-import { C2SSyncMessage, type S2CSyncMessage } from "./codec";
+import { C2SSyncMessage, type BlobEntry, type S2CSyncMessage } from "./codec";
 
 export type SyncAuthPhase = "check_id" | "code_input" | "authenticated";
 
@@ -17,9 +17,13 @@ export interface WebSocketContext {
 	code: string;
 }
 
+export interface WebSocketShellContext {
+	ctx?: WebSocketContext;
+}
+
 function generateCode() {
 	let code = "";
-	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 	while (code.length < 6) {
 		code += charset[Math.floor(Math.random() * charset.length)];
@@ -33,21 +37,45 @@ export async function showCode(code: string) {
 		chalk.blue(await figlet(code, "univers")),
 		"",
 		chalk.blue("Above this message is the code to sync this project to Roblox Studio."),
+		chalk.blue(`Copy-pasting ${chalk.italic.italic("weaklings")} may copy the following: ${code}`),
 		chalk.red("Don't share this code with anybody you don't trust."),
 	].join("\n");
 
 	info(text);
 }
 
-function context(ws: WSContext<WebSocketContext>): WebSocketContext {
-	ws.raw ??= { phase: "check_id", code: generateCode() };
+function context(ws: WSContext<WebSocketShellContext>): WebSocketContext {
+	ws.raw ??= {};
 
-	return ws.raw;
+	ws.raw.ctx ??= {
+		phase: "check_id",
+		code: generateCode(),
+	};
+
+	return ws.raw.ctx!;
 }
 
 export class SyncServer {
 	hono = new Hono();
 	devServer: DevServer;
+	currentBlob: BlobEntry[] = [];
+	websockets: WSContext<WebSocketShellContext>[] = [];
+
+	setCurrentBlob(blob: BlobEntry[]) {
+		this.currentBlob = blob;
+
+		for (const ws of this.websockets) {
+			const ctx = context(ws);
+
+			if (ctx.phase === "authenticated") {
+				this.message(ws, {
+					type: "push_blob",
+					entries: this.currentBlob,
+				});
+				debug("push");
+			}
+		}
+	}
 
 	constructor(devServer: DevServer) {
 		this.devServer = devServer;
@@ -61,14 +89,15 @@ export class SyncServer {
 		Bun.serve({
 			port: 1114,
 			fetch: this.hono.fetch,
+			websocket,
 		});
 	}
 
-	message(ws: WSContext<WebSocketContext>, message: v.InferOutput<typeof S2CSyncMessage>) {
+	message(ws: WSContext<WebSocketShellContext>, message: v.InferOutput<typeof S2CSyncMessage>) {
 		return ws.send(JSON.stringify(message));
 	}
 
-	sendPhase(ws: WSContext<WebSocketContext>) {
+	sendPhase(ws: WSContext<WebSocketShellContext>) {
 		const { phase } = context(ws);
 
 		this.message(ws, {
@@ -78,12 +107,16 @@ export class SyncServer {
 		});
 	}
 
-	createWebsocketHandler(ctx: Context): WSEvents<WebSocketContext> {
+	createWebsocketHandler(ctx: Context): WSEvents<WebSocketShellContext> {
 		const self = this;
 
 		return {
 			onOpen(evt, ws) {
 				self.sendPhase(ws);
+				self.websockets.push(ws);
+			},
+			onClose(evt, ws) {
+				self.websockets = self.websockets.filter(x => x !== ws);
 			},
 			onMessage(evt, ws) {
 				v.assert(v.string(), evt.data);
@@ -92,15 +125,21 @@ export class SyncServer {
 
 				match(message)
 					.with({ type: "proceed_auth" }, message => {
-						context(ws).phase = message.requestedMode;
-
 						if (message.requestedMode === "code_input") {
+							context(ws).phase = message.requestedMode;
+							showCode(context(ws).code);
 						}
 						self.sendPhase(ws);
 					})
 					.with({ type: "verification_code" }, message => {
-						if (context(ws).code === message.code) {
+						if (context(ws).code.toUpperCase() === message.code.toUpperCase()) {
 							context(ws).phase = "authenticated";
+							self.message(ws, {
+								type: "push_blob",
+								entries: self.currentBlob,
+							});
+						} else {
+							showCode(context(ws).code);
 						}
 						self.sendPhase(ws);
 					})

@@ -70,24 +70,30 @@ export class CodePrinter {
 
 			result += quote;
 
-			const validChars =
-				"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@%^&*()_+-=`{}|[]\\;':\",./<>? ";
-
-			for (const char of str) {
-				if (!validChars.includes(char)) {
-					result += `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`;
-				} else if (char === quote || char === "\\") {
-					result += `\\${char}`;
-				} else {
-					result += char;
-				}
-			}
+			result += this.escapeLuaStringBody(str);
 
 			result += quote;
 
 			return result;
 		}
 		unreachable(this.mode);
+	}
+
+	escapeLuaStringBody(str: string): string {
+		let result = "";
+		const validChars =
+			"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@%^&*()_+-=`{}|[]\\;':\",./<>? ";
+
+		for (const char of str) {
+			if (!validChars.includes(char)) {
+				result += `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`;
+			} else if (char === '"' || char === "`" || char === "\\") {
+				result += `\\${char}`;
+			} else {
+				result += char;
+			}
+		}
+		return result;
 	}
 
 	printNode(node: { type: string }) {

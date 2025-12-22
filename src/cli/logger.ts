@@ -52,11 +52,19 @@ export function showBlockCompletedLine(block: SchedulerBlock) {
 	text += chalk.italic(((performance.now() - block.begun) / 1000).toFixed(2));
 	text += ` seconds)`;
 
+	if (block.failed) {
+		text += ` (FAILED)`;
+	}
+
 	const width = getTerminalWidth();
 
 	while (Bun.stringWidth(text) < width) text += " ";
 
-	text = chalk.inverse.green(text);
+	if (block.failed) {
+		text = chalk.inverse.red(text);
+	} else {
+		text = chalk.inverse.green(text);
+	}
 
 	Bun.stdout.write(`${lastLineWritten === "scheduler_block" ? "\r" : ""}${text}`);
 

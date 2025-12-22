@@ -11,26 +11,16 @@ tkpack.moduleTable = {}
 tkpack.includedModules = {}
 tkpack.moduleReturns = {}
 
-function tkpack.indexOf(array: { any }, item: any)
-	for real, index in array do
-		if item == real then
-			return index
-		end
-	end
-
-	return -1
-end
-
 function tkpack.declare(modulePath: string, init: () -> any)
 	tkpack.moduleTable[modulePath] = init
 end
 
 function tkpack.include(modulePath: string)
-	if tkpack.indexOf(tkpack.includedModules, modulePath) ~= -1 then
+	if table.find(tkpack.includedModules, modulePath) then
 		return tkpack.moduleReturns[modulePath]
 	end
 
-	tkpack.includedModules[#tkpack.includedModules] = modulePath
+	table.insert(tkpack.includedModules, modulePath)
 
 	tkpack.moduleReturns[modulePath] = tkpack.moduleTable[modulePath]()
 

@@ -2,6 +2,8 @@ import { walk } from "zimmerframe";
 import type { Cache } from "../compiler/cache";
 import { type ImportInfo } from "../plugin/analysis";
 import { action } from "../scheduler/action";
+import { serviceNames } from "../utils/datamodel";
+import { resolveImport } from "../utils/resolver";
 import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 
@@ -44,6 +46,7 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 		if (id === "require") return { type: "require" };
 		if (id === "game") return { type: "datamodel", path: [], origin: "game" };
 		if (id === "script") return { type: "datamodel", path: [], origin: "script" };
+		if (serviceNames.includes(id)) return { type: "datamodel", path: [id], origin: "game" };
 	}
 
 	if (expr.type === "AstExprConstantString") {
@@ -107,7 +110,7 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 			} else if (module.type === "const_str") {
 				return {
 					type: "imported_module_path",
-					path: module.value,
+					path: module.value.replaceAll("@self", "."),
 				};
 			}
 		}
@@ -128,7 +131,7 @@ export function evaluateExpressionType(expr: Luau.Expression): LuauAnalysisType 
 	return { type: "unknown" };
 }
 
-async function _analyzeImports(source: string, cache: Cache): Promise<ImportInfo[]> {
+async function _analyzeImports(source: string, path: string, cache: Cache): Promise<ImportInfo[]> {
 	const ast = await parseLuauDocument(source, cache);
 	const imports: ImportInfo[] = [];
 
@@ -136,7 +139,7 @@ async function _analyzeImports(source: string, cache: Cache): Promise<ImportInfo
 		ast.root as Luau.Node,
 		{},
 		{
-			AstExprCall(node) {
+			AstExprCall(node, { next }) {
 				const returnType = evaluateExpressionType(node);
 
 				if (returnType.type === "imported_module") {
@@ -147,6 +150,19 @@ async function _analyzeImports(source: string, cache: Cache): Promise<ImportInfo
 						type: "classic",
 					});
 				}
+
+				if (returnType.type === "imported_module_path") {
+					const resolved = resolveImport(returnType.path, path);
+
+					if (resolved) {
+						imports.push({
+							type: "absolute-path",
+							path: resolved,
+						});
+					}
+				}
+
+				next();
 			},
 		},
 	);
@@ -154,7 +170,7 @@ async function _analyzeImports(source: string, cache: Cache): Promise<ImportInfo
 	return imports;
 }
 
-export async function analyzeImports(source: string, cache: Cache): Promise<ImportInfo[]> {
+export async function analyzeImports(source: string, path: string, cache: Cache): Promise<ImportInfo[]> {
 	return action({
 		id: "luau:analyze_imports",
 		name: "Analyze file imports",
@@ -162,7 +178,7 @@ export async function analyzeImports(source: string, cache: Cache): Promise<Impo
 		args: [source],
 		cache,
 		impl(source) {
-			return _analyzeImports(source, cache);
+			return _analyzeImports(source, path, cache);
 		},
 	});
 }

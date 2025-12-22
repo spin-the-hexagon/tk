@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import type { FileEntry } from "../compiler/scan-files";
 import type { Config } from "../config/schema";
+import { serviceNames } from "./datamodel";
 
 export interface SourcemapNode {
 	name: string;
@@ -19,7 +20,7 @@ export function getSourcemapNode(node: SourcemapNode, path: string[]) {
 	if (!childNode) {
 		childNode = {
 			name: child,
-			className: "Folder",
+			className: serviceNames.includes(child) ? child : "Folder",
 			filePaths: [],
 			children: [],
 		};

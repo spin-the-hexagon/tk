@@ -1,12 +1,13 @@
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { warn } from "../cli/logger";
+import { nfError, warn } from "../cli/logger";
 import type { Config } from "../config/schema";
 import { isExperimentEnabled } from "../config/utils";
 import { pluginLuau } from "../luau/plugin";
 import type { PluginMetadata } from "../plugin/schema";
 import { printProfileReadout } from "../scheduler/profiler";
 import { getCurrentBlock, wait } from "../scheduler/scheduler";
+import { Instance } from "../sync/rodom";
 import { SyncServer } from "../sync/server";
 import { pluginTypescript } from "../typescript/plugin";
 import { fs } from "../utils/fastfs";
@@ -19,7 +20,9 @@ import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
 
 export interface BundledItem {
 	path: string;
+	mode: "client" | "server" | "module";
 	src: string;
+	dataModelPath: string[];
 }
 
 export class DevServer {
@@ -28,16 +31,20 @@ export class DevServer {
 	isUpdateQueued = false;
 	cache: Cache;
 	plugins: PluginMetadata[] = [];
-	server: SyncServer;
+	server?: SyncServer;
 	profiles: string[] = [];
 
 	constructor(opts: { path: string; config: Config }) {
-		fs.addWatchPath(opts.path);
+		for (const portal of opts.config.portals) {
+			fs.addWatchPath(resolve(opts.path, portal.project));
+		}
 		fs.addOnUpdate(() => {
 			this.isUpdateQueued = true;
 		});
 
-		this.server = new SyncServer(this);
+		if (opts.config.type !== "plugin") {
+			this.server = new SyncServer(this);
+		}
 
 		this.path = resolve(opts.path);
 		this.config = opts.config;
@@ -62,10 +69,15 @@ export class DevServer {
 	async updateLoop() {
 		await this.init();
 		while (true) {
-			await wait(3000);
+			await wait(100);
 			if (this.isUpdateQueued) {
 				this.isUpdateQueued = false;
-				await this.update();
+				try {
+					await this.update();
+				} catch (err) {
+					nfError(err);
+					getCurrentBlock().failed = true;
+				}
 			}
 		}
 	}
@@ -133,11 +145,15 @@ export class DevServer {
 			bundles.push({
 				path: entry.path,
 				src: codeStringToRawText(code),
+				dataModelPath: entry.dataModelPath,
+				mode: entry.mode,
 			});
 		}
 
 		if (this.config.type === "plugin") {
 			await this.savePlugin(bundles);
+		} else {
+			await this.pushGame(bundles);
 		}
 
 		// Update sourcemap
@@ -154,6 +170,18 @@ export class DevServer {
 
 			await Bun.write(resolve(this.path, ".tk", "profile.log"), this.profiles.join("\n\n\n"));
 		}
+	}
+
+	async pushGame(bundles: BundledItem[]) {
+		const domRoot = new Instance();
+
+		for (const bundle of bundles) {
+			domRoot.addBundle(bundle);
+		}
+
+		const blobs = domRoot.asBlobEntries([]);
+
+		this.server?.setCurrentBlob(blobs);
 	}
 
 	async savePlugin(bundles: BundledItem[]) {

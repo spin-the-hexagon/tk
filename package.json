@@ -15,7 +15,7 @@
 	},
 	"scripts": {
 		"start": "bun run ./src/index.ts",
-		"fmt": "oxfmt . && stylua src/",
+		"fmt": "oxfmt . && stylua src/ studio/",
 		"change": "bun run --bun changeset",
 		"version": "bun run --bun changeset version",
 		"make-natives-linux": "bun build --compile --target=bun-linux-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",

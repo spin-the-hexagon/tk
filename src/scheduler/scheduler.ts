@@ -6,6 +6,7 @@ export interface SchedulerBlock {
 	tasks: SchedulerTask[];
 	add(task: SchedulerTask): void;
 	process(): Promise<void>;
+	failed?: boolean;
 	done: boolean;
 	begun: number;
 }

@@ -5,11 +5,11 @@ entry = "src/index.luau"
 
 [[portals]]
 project = "./src/"
-roblox = "game.TK"
+roblox = "game.ReplicatedStorage.TK"
 
 [[portals]]
 project = "./packages"
-roblox = "game.Packages"
+roblox = "game.ReplicatedStorage.Packages"
 external = true
 
 [experimental]

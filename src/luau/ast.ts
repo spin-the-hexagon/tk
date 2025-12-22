@@ -47,7 +47,14 @@ export namespace Luau {
 		| VarargsExpression
 		| IfElseExpression
 		| TypeAssertionExpression
-		| GroupExpression;
+		| GroupExpression
+		| InterpolatedStringExpression;
+
+	export interface InterpolatedStringExpression {
+		type: "AstExprInterpString";
+		strings: string[];
+		expressions: Expression[];
+	}
 
 	export interface BreakStatement {
 		type: "AstStatBreak";
@@ -274,7 +281,8 @@ export namespace Luau {
 		| "Sub"
 		| "Div"
 		| "Mul"
-		| "Mod";
+		| "Mod"
+		| "Pow";
 
 	export interface ContinueStatement {
 		type: "AstStatContinue";

@@ -19,6 +19,7 @@ function binaryOpToText(op: Luau.BinaryOp) {
 		.with("And", () => "and")
 		.with("Concat", () => "..")
 		.with("Or", () => "or")
+		.with("Pow", () => "^")
 		.exhaustive();
 }
 
@@ -52,6 +53,29 @@ export function integrateLuauPrinter(codeprinter: CodePrinter) {
 					cp.push("=");
 					cp.printNode(node.value);
 				}
+			},
+		},
+		AstExprInterpString: {
+			print(cp, node) {
+				let strIdx = 0;
+				let exprIdx = 0;
+
+				cp.push("`");
+				while (strIdx < node.strings.length || exprIdx < node.expressions.length) {
+					if (strIdx < node.strings.length) {
+						cp.push(cp.escapeLuaStringBody(node.strings[strIdx]!));
+
+						strIdx++;
+					}
+					if (exprIdx < node.expressions.length) {
+						cp.push("{");
+						cp.printNode(node.expressions[exprIdx]!);
+						cp.push("}");
+
+						exprIdx++;
+					}
+				}
+				cp.push("`");
 			},
 		},
 		AstStatBreak: printer("break"),

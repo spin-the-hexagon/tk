@@ -1,7 +1,8 @@
 import * as v from "valibot";
 import type { Cache } from "../compiler/cache";
-import type { CodeFileEntry } from "../compiler/scan-files";
+import type { CodeFileEntry, ModelFileEntry } from "../compiler/scan-files";
 import type { Luau } from "../luau/ast";
+import type { Instance } from "../sync/rodom";
 import type { Analysis } from "./analysis";
 
 export const PluginFileIdentificationSchema = v.union([v.literal("module"), v.literal("client"), v.literal("server")]);
@@ -12,12 +13,22 @@ export const PluginCodeFormatSchema = v.object({
 	mode: PluginFileIdentificationSchema,
 });
 
-export const PluginFileFormatSchema = v.union([PluginCodeFormatSchema]);
+export const PluginModelFormatSchema = v.object({
+	type: v.literal("model"),
+	extension: v.string(),
+});
+
+export const PluginFileFormatSchema = v.union([PluginCodeFormatSchema, PluginModelFormatSchema]);
 
 export interface PluginTransformProps {
 	src: string;
 	path: string;
 	pathDatamodel: string[];
+	cache: Cache;
+}
+
+export interface PluginTransformModelProps {
+	model: ModelFileEntry;
 	cache: Cache;
 }
 
@@ -30,8 +41,9 @@ export const PluginMetadataSchema = v.object({
 	id: v.string(),
 	version: v.number(),
 	fileFormats: v.array(PluginFileFormatSchema),
-	analyze: v.custom<(file: CodeFileEntry, cache: Cache) => Promise<Analysis>>(x => true),
-	transform: v.custom<(props: PluginTransformProps) => Promise<PluginTransformResult>>(x => true),
+	analyze: v.optional(v.custom<(file: CodeFileEntry, cache: Cache) => Promise<Analysis>>(x => true)),
+	transform: v.optional(v.custom<(props: PluginTransformProps) => Promise<PluginTransformResult>>(x => true)),
+	transpileModel: v.optional(v.custom<(props: PluginTransformModelProps) => Promise<Instance>>(x => true)),
 });
 
 export type PluginMetadata = v.InferOutput<typeof PluginMetadataSchema>;

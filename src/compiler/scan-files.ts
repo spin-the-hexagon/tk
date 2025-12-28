@@ -15,12 +15,20 @@ export type CodeFileEntry = {
 	forceSrc?: string;
 };
 
+export type ModelFileEntry = {
+	dataModelPath: string[];
+	path: string;
+	type: "model";
+	pluginId: string;
+};
+
 export type FileEntry =
 	| {
 			dataModelPath: string[];
 			path: string;
 			type: FileType;
 	  }
+	| ModelFileEntry
 	| CodeFileEntry;
 
 export async function scanFiles({
@@ -39,18 +47,28 @@ export async function scanFiles({
 	if (type === "file") {
 		for (const plug of plugins) {
 			for (const fmt of plug.fileFormats) {
-				if (fmt.type !== "code") continue;
 				if (!path.endsWith(fmt.extension)) continue;
-				if (fmt.mode !== "module" && external) continue;
-				return [
-					{
-						dataModelPath: resolveDataModelPath(robloxPath),
-						path,
-						type: "code",
-						mode: fmt.mode,
-						pluginId: plug.id,
-					},
-				];
+				if (fmt.type === "code") {
+					if (fmt.mode !== "module" && external) continue;
+					return [
+						{
+							dataModelPath: resolveDataModelPath(robloxPath),
+							path,
+							type: "code",
+							mode: fmt.mode,
+							pluginId: plug.id,
+						},
+					];
+				} else if (fmt.type === "model") {
+					return [
+						{
+							dataModelPath: resolveDataModelPath(robloxPath),
+							path,
+							type: "model",
+							pluginId: plug.id,
+						},
+					];
+				}
 			}
 		}
 

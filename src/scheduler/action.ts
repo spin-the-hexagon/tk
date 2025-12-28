@@ -6,6 +6,7 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 	id: string;
 	args: ArgsType;
 	cache?: Cache;
+	forceCache?: boolean;
 	impl(...args: ArgsType): Promise<PromiseType>;
 	phase: SchedulerPhase;
 }): Promise<PromiseType> {
@@ -16,7 +17,7 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 		}),
 	).toString(36);
 
-	if (props.cache && props.cache.enabled) {
+	if (props.cache && (props.cache.enabled || props.forceCache)) {
 		const result = props.cache.fastCache[argsHash];
 
 		if (result) {

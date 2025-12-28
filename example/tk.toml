@@ -12,3 +12,6 @@ roblox = "game.StarterPlayer.StarterPlayerScripts.src"
 [[portals]]
 project = "./src/server"
 roblox = "game.ServerScriptService.src"
+
+[experimental]
+rbxmx=true

@@ -65,8 +65,14 @@ export class Instance {
 	addBundle(bundle: BundledItem) {
 		const instance = this.findChild(bundle.dataModelPath);
 
-		instance.className = "Script";
-		instance.data.RunContext = bundle.mode === "server" ? "Server" : "Client";
-		instance.data.Source = bundle.src;
+		if (bundle.mode === "model") {
+			instance.className = bundle.data.className;
+			instance.data = bundle.data.data;
+			instance.children = bundle.data.children;
+		} else {
+			instance.className = "Script";
+			instance.data.RunContext = bundle.mode === "server" ? "Server" : "Client";
+			instance.data.Source = bundle.src;
+		}
 	}
 }

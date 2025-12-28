@@ -57,8 +57,68 @@ function module.find_from_path(path: { string }): Instance?
 	return result
 end
 
-function module.set_key(object: Instance, key: string, value: string)
-	(object :: any)[key] = value
+function module.set_key(object: Instance, key: string, value: any): ()
+	local current, err = pcall(function()
+		return (object :: any)[key]
+	end)
+
+	if err then
+		return
+	end
+
+	local real_value = value
+
+	if typeof(current) == "CFrame" then
+		real_value = CFrame.fromMatrix(
+			Vector3.new(value.X, value.Y, value.Z),
+			Vector3.new(value.R00, value.R01, value.R02),
+			Vector3.new(value.R10, value.R11, value.R12),
+			Vector3.new(value.R20, value.R21, value.R22)
+		)
+	end
+
+	if typeof(current) == "Vector3" then
+		real_value = Vector3.new(value.X, value.Y, value.Z)
+	end
+
+	if typeof(current) == "Color3" and typeof(real_value) == "number" then
+		-- 165 + 162*256 + 163*256*256 + 255*256*256*256
+		-- BGRA
+		-- example: 4288914085
+		-- 163, 162, 165
+		local blue = value % 256
+		local green = math.floor(value / 256) % 256
+		local red = math.floor(value / 256 / 256) % 256
+		local alpha = math.floor(value / 256 / 256 / 256) % 256 -- for some reason, alpha is *not* a field in Color3, yet is included
+
+		real_value = Color3.fromRGB(red, green, blue)
+	end
+
+	if typeof(current) == "PhysicalProperties" or key == "CustomPhysicalProperties" then
+		real_value = PhysicalProperties.new(Enum.Material.Plastic)
+
+		if value.Density then
+			real_value.Density = value.Density
+		end
+		if value.Elasticity then
+			real_value.Elasticity = value.Elasticity
+		end
+		if value.ElasticityWeight then
+			real_value.ElasticityWeight = value.ElasticityWeight
+		end
+		if value.Friction then
+			real_value.Friction = value.Friction
+		end
+		if value.FrictionWeight then
+			real_value.FrictionWeight = value.FrictionWeight
+		end
+
+		if value.CustomPhysics == false then
+			real_value = nil
+		end
+	end
+
+	(object :: any)[key] = real_value
 end
 
 function module.push_blob_unto_datamodel(blob: { Codecs.BlobEntry })

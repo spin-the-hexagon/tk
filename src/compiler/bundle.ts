@@ -15,7 +15,6 @@ import { unreachable } from "../utils/unreachable";
 import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
-import { debug } from "../cli/logger";
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
 function printAst(node: Luau.BlockStatement, fileName: string, cache: Cache) {
@@ -107,7 +106,7 @@ export class Bundle {
 				while (p < self.files.length) {
 					const file = self.files[p]!;
 					const plugin = findPlugin(self.plugins, file.pluginId);
-					const analysis = await plugin.analyze(file, self.cache);
+					const analysis = await plugin.analyze!(file, self.cache);
 
 					for (const imp of analysis.imports) {
 						if (imp.type === "classic") {
@@ -168,12 +167,13 @@ export class Bundle {
 						path: file.path,
 						dataModelPath: file.dataModelPath,
 						src,
+						version: plugin.version,
 					},
 				],
 				cache,
 				phase: "build",
 				async impl() {
-					return await plugin.transform({
+					return await plugin.transform!({
 						path: file.path,
 						pathDatamodel: file.dataModelPath,
 						src,

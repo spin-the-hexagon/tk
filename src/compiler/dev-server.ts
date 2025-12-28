@@ -1,10 +1,12 @@
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { nfError, warn } from "../cli/logger";
+import { debug, nfError, warn } from "../cli/logger";
 import type { Config } from "../config/schema";
 import { isExperimentEnabled } from "../config/utils";
 import { pluginLuau } from "../luau/plugin";
-import type { PluginMetadata } from "../plugin/schema";
+import { findPlugin, type PluginMetadata } from "../plugin/schema";
+import { pluginRBXMX } from "../rbxmx/plugin";
+import { action } from "../scheduler/action";
 import { printProfileReadout } from "../scheduler/profiler";
 import { getCurrentBlock, wait } from "../scheduler/scheduler";
 import { Instance } from "../sync/rodom";
@@ -18,12 +20,19 @@ import { Bundle } from "./bundle";
 import { Cache, cacheFileName } from "./cache";
 import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
 
-export interface BundledItem {
-	path: string;
-	mode: "client" | "server" | "module";
-	src: string;
-	dataModelPath: string[];
-}
+export type BundledItem =
+	| {
+			path: string;
+			mode: "client" | "server" | "module";
+			src: string;
+			dataModelPath: string[];
+	  }
+	| {
+			path: string;
+			mode: "model";
+			data: Instance;
+			dataModelPath: string[];
+	  };
 
 export class DevServer {
 	path: string;
@@ -56,6 +65,9 @@ export class DevServer {
 		this.updateLoop();
 
 		this.plugins.push(pluginLuau());
+		if (isExperimentEnabled(this.config, "rbxmx")) {
+			this.plugins.push(pluginRBXMX());
+		}
 
 		if (isExperimentEnabled(this.config, "typescript")) {
 			this.plugins.push(pluginTypescript());
@@ -73,7 +85,16 @@ export class DevServer {
 			if (this.isUpdateQueued) {
 				this.isUpdateQueued = false;
 				try {
-					await this.update();
+					const self = this;
+					await action({
+						id: "dev:build",
+						name: "Build",
+						args: [],
+						impl() {
+							return self.update();
+						},
+						phase: "build",
+					});
 				} catch (err) {
 					nfError(err);
 					getCurrentBlock().failed = true;
@@ -150,6 +171,24 @@ export class DevServer {
 			});
 		}
 
+		for (const file of entries) {
+			if (file.type !== "model") continue;
+
+			const plugin = findPlugin(this.plugins, file.pluginId);
+
+			const result = await plugin.transpileModel!({
+				model: file,
+				cache: this.cache,
+			});
+
+			bundles.push({
+				mode: "model",
+				dataModelPath: file.dataModelPath,
+				path: file.path,
+				data: result,
+			});
+		}
+
 		if (this.config.type === "plugin") {
 			await this.savePlugin(bundles);
 		} else {
@@ -186,6 +225,8 @@ export class DevServer {
 
 	async savePlugin(bundles: BundledItem[]) {
 		if (bundles.length !== 1) throw new Error(`Incorrect number of bundles. Expected 1, got ${bundles.length}`);
+		if (bundles[0]?.mode === "model") throw new Error(`Plugins cannot be a model.`);
+
 		const coreBundle = bundles[0]!;
 		const src = coreBundle.src;
 		if (process.platform !== "win32") {

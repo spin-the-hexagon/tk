@@ -1,6 +1,9 @@
 import { basename } from "node:path";
-import { warn } from "../cli/logger";
+
 import type { Luau } from "../luau/ast";
+import type { Cache } from "./cache";
+
+import { warn } from "../cli/logger";
 import { integrateLuauPrinter } from "../luau/printer";
 import { transpileToTKPack } from "../luau/tkpack-transpile";
 import { findPlugin, type PluginMetadata } from "../plugin/schema";
@@ -12,7 +15,6 @@ import { resolveDataModelPath } from "../utils/datamodel";
 import { fs } from "../utils/fastfs";
 import { type CodeString } from "../utils/sourcemap";
 import { unreachable } from "../utils/unreachable";
-import type { Cache } from "./cache";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
 // @ts-ignore
 import tkpack from "./tkpack.lib.luau" with { type: "text" };

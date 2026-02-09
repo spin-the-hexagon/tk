@@ -1,7 +1,7 @@
 {
 	"tabWidth": 4,
 	"useTabs": true,
-	"plugins": ["prettier-plugin-organize-imports"],
+	"experimentalSortImports": {},
 	"printWidth": 120,
 	"arrowParens": "avoid"
 }

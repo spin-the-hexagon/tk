@@ -1,4 +1,5 @@
 import chalk, { type ChalkInstance } from "chalk";
+
 import { showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
 import { unreachable } from "../utils/unreachable";
 

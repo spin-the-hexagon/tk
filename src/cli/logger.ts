@@ -1,10 +1,16 @@
 import chalk, { type ChalkInstance } from "chalk";
+
 import { type SchedulerBlock, getSchedulerPhaseColor, getSchedulerPhaseOrdinal } from "../scheduler/scheduler";
 import { getTerminalWidth } from "../utils/get-width";
 
 let lastLineWritten: undefined | string = undefined;
+export let canShowSchedulerUpdates = {
+	value: true,
+};
 
 export function showSchedulerBlockState(block: SchedulerBlock) {
+	if (!canShowSchedulerUpdates.value) return;
+
 	const completedTasks = block.tasks.filter(x => x.done).length;
 	const activeTasks = block.tasks.filter(x => x.hasBegun && !x.done).length;
 	const totalTasks = block.tasks.length;
@@ -42,6 +48,8 @@ export function showSchedulerBlockState(block: SchedulerBlock) {
 }
 
 export function showBlockCompletedLine(block: SchedulerBlock) {
+	if (!canShowSchedulerUpdates.value) return;
+
 	let text = "";
 
 	text += ` * Executed `;
@@ -70,6 +78,8 @@ export function showBlockCompletedLine(block: SchedulerBlock) {
 
 	lastLineWritten = "completion";
 }
+
+export const leadingLength = 10;
 
 export function logger(type: string, color: ChalkInstance) {
 	return function (...args: any[]) {

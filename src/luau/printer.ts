@@ -1,7 +1,9 @@
 import { match } from "ts-pattern";
+
+import type { Luau } from "./ast";
+
 import { hotpatch, printer, subref, when, type CodePrinter } from "../utils/code-printer";
 import { unreachable } from "../utils/unreachable";
-import type { Luau } from "./ast";
 
 function binaryOpToText(op: Luau.BinaryOp) {
 	return match(op)

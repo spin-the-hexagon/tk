@@ -1,6 +1,8 @@
 import { basename, resolve } from "node:path";
-import { createPortalsFromProjectNode, type ProjectJSON } from "../config/project";
+
 import type { PluginMetadata } from "../plugin/schema";
+
+import { createPortalsFromProjectNode, type ProjectJSON } from "../config/project";
 import { schedulePromise } from "../scheduler/scheduler";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { fs, type FileType } from "../utils/fastfs";

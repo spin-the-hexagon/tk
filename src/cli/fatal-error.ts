@@ -1,4 +1,6 @@
 import chalk from "chalk";
+
+import { leadingLength } from "./logger";
 import { createPrinter } from "./printer";
 
 export type FatalErrorFact = string | string[];
@@ -15,7 +17,9 @@ export function getFatalErrorFactInfo(fact: FatalErrorFact | undefined) {
 	return [fact];
 }
 
-const leftEdge = 12;
+const padding = 2;
+
+const leftEdge = leadingLength - padding;
 
 function alignLine(left: string, right: string) {
 	let text = left;
@@ -23,8 +27,6 @@ function alignLine(left: string, right: string) {
 	while (Bun.stringWidth(text) < leftEdge) {
 		text = " " + text;
 	}
-
-	const padding = 2;
 
 	text += " ".repeat(padding);
 
@@ -45,7 +47,6 @@ function alignLine(left: string, right: string) {
 export function fatalError(error: FatalError): never {
 	const printer = createPrinter();
 	printer.gap();
-	printer.indent();
 	printer.write(alignLine("", chalk.red("a fatal error occurred")));
 	for (const what of getFatalErrorFactInfo(error.what)) {
 		printer.gap();
@@ -59,7 +60,6 @@ export function fatalError(error: FatalError): never {
 		printer.gap();
 		printer.write(alignLine(chalk.blue("hint:"), hint));
 	}
-	printer.dedent();
 	printer.gap();
 	console.log(printer.text);
 	process.exit(1);

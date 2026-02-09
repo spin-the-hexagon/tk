@@ -374,11 +374,12 @@ end)
         return result
      end;
     function module.set_key(object,key,value)
-        local current,err=pcall(function()
+        local success,current=pcall(function()
             return(object)[key]
         end);
-        if err then
-             return
+        if not(success)then
+             print(object,current);
+            return
          end;
         local real_value=value;
         if(typeof(current))==("CFrame")then
@@ -386,6 +387,9 @@ end)
         end;
         if(typeof(current))==("Vector3")then
              real_value=Vector3.new(value.X,value.Y,value.Z)
+        end;
+        if((typeof(current))==("Content"))and((typeof(real_value))==("string"))then
+             real_value=Content.fromUri(real_value)
         end;
         if((typeof(current))==("Color3"))and((typeof(real_value))==("number"))then
              local blue=(value)%(256);
@@ -415,8 +419,10 @@ end)
                  real_value=nil
              end
          end;
-        (object)[key]=real_value
-     end;
+        pcall(function()
+            (object)[key]=real_value
+         end)
+    end;
     function module.push_blob_unto_datamodel(blob)
         do
              local old=module.get_old_blob();

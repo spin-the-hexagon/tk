@@ -1,5 +1,6 @@
-import { TK_VERSION } from "../constants";
 import type { PluginMetadata } from "../plugin/schema";
+
+import { TK_VERSION } from "../constants";
 import { fs } from "../utils/fastfs";
 import { analyzeImports } from "./analysis";
 import { parseLuauDocument } from "./parser";

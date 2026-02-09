@@ -1,10 +1,12 @@
 import { walk } from "zimmerframe";
+
 import type { Cache } from "../compiler/cache";
+import type { Luau } from "./ast";
+
 import { type ImportInfo } from "../plugin/analysis";
 import { action } from "../scheduler/action";
 import { serviceNames } from "../utils/datamodel";
 import { resolveImport } from "../utils/resolver";
-import type { Luau } from "./ast";
 import { parseLuauDocument } from "./parser";
 
 export type LuauAnalysisType =

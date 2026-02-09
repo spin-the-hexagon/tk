@@ -1,12 +1,14 @@
 import { ResolverFactory } from "oxc-resolver";
 import { walk } from "zimmerframe";
-import { warn } from "../cli/logger";
+
 import type { Cache } from "../compiler/cache";
 import type { FileEntry } from "../compiler/scan-files";
+import type { Luau } from "./ast";
+
+import { warn } from "../cli/logger";
 import { action } from "../scheduler/action";
 import { resolveDataModelPath } from "../utils/datamodel";
 import { evaluateExpressionType } from "./analysis";
-import type { Luau } from "./ast";
 
 const resolver = new ResolverFactory({
 	extensions: [".js", ".ts", ".luau", ".lua", ".mjs", ".mts"],

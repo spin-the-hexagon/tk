@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { resolve } from "path";
 import TOML from "smol-toml";
 import * as v from "valibot";
+
 import { createPrinter, type Printer } from "../cli/printer";
 import { ConfigSchema, type Config } from "./schema";
 

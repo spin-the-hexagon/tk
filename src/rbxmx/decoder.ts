@@ -1,6 +1,8 @@
 import { XmlElement, XmlText } from "@rgrove/parse-xml";
-import { nfError } from "../cli/logger";
+
 import type { Cache } from "../compiler/cache";
+
+import { nfError } from "../cli/logger";
 import { Instance } from "../sync/rodom";
 import { getNameMapTable } from "./database";
 

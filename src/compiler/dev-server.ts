@@ -1,11 +1,16 @@
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { debug, nfError, warn } from "../cli/logger";
+
 import type { Config } from "../config/schema";
+
+import { nfError, warn } from "../cli/logger";
 import { isExperimentEnabled } from "../config/utils";
 import { pluginLuau } from "../luau/plugin";
+import { pluginMedia } from "../media/plugin";
+import { pluginModels } from "../models/plugin";
 import { findPlugin, type PluginMetadata } from "../plugin/schema";
 import { pluginRBXMX } from "../rbxmx/plugin";
+import { AssetCollection } from "../roblox/assets";
 import { action } from "../scheduler/action";
 import { printProfileReadout } from "../scheduler/profiler";
 import { getCurrentBlock, wait } from "../scheduler/scheduler";
@@ -42,6 +47,7 @@ export class DevServer {
 	plugins: PluginMetadata[] = [];
 	server?: SyncServer;
 	profiles: string[] = [];
+	assets: AssetCollection;
 
 	constructor(opts: { path: string; config: Config }) {
 		for (const portal of opts.config.portals) {
@@ -72,6 +78,19 @@ export class DevServer {
 		if (isExperimentEnabled(this.config, "typescript")) {
 			this.plugins.push(pluginTypescript());
 		}
+
+		if (isExperimentEnabled(this.config, "models")) {
+			this.plugins.push(pluginModels());
+		}
+
+		if (isExperimentEnabled(this.config, "media")) {
+			this.plugins.push(pluginMedia());
+		}
+
+		this.assets = new AssetCollection({
+			config: this.config,
+			projectPath: this.path,
+		});
 	}
 
 	async init() {
@@ -179,6 +198,8 @@ export class DevServer {
 			const result = await plugin.transpileModel!({
 				model: file,
 				cache: this.cache,
+				config: this.config,
+				assets: this.assets,
 			});
 
 			bundles.push({

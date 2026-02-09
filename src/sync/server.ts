@@ -1,13 +1,16 @@
+import type { WSContext, WSEvents } from "hono/ws";
+
 import chalk from "chalk";
 import figlet from "figlet";
 import { Hono, type Context } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import { poweredBy } from "hono/powered-by";
-import type { WSContext, WSEvents } from "hono/ws";
 import { match } from "ts-pattern";
 import * as v from "valibot";
-import { debug, info } from "../cli/logger";
+
 import type { DevServer } from "../compiler/dev-server";
+
+import { debug, info } from "../cli/logger";
 import { C2SSyncMessage, type BlobEntry, type S2CSyncMessage } from "./codec";
 
 export type SyncAuthPhase = "check_id" | "code_input" | "authenticated";

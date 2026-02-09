@@ -6,7 +6,13 @@ export const PortalSchema = v.object({
 	external: v.optional(v.boolean()),
 });
 
-export const ExperimentalFlagSchema = v.union([v.literal("typescript"), v.literal("profiling"), v.literal("rbxmx")]);
+export const ExperimentalFlagSchema = v.union([
+	v.literal("typescript"),
+	v.literal("profiling"),
+	v.literal("rbxmx"),
+	v.literal("models"),
+	v.literal("media"),
+]);
 
 export const GameSchema = v.object({
 	type: v.optional(v.literal("game")),

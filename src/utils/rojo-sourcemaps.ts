@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
+
 import type { FileEntry } from "../compiler/scan-files";
 import type { Config } from "../config/schema";
+
 import { serviceNames } from "./datamodel";
 
 export interface SourcemapNode {

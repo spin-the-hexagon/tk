@@ -1,6 +1,8 @@
 import { parseXml, XmlElement } from "@rgrove/parse-xml";
-import { TK_VERSION } from "../constants";
+
 import type { PluginMetadata } from "../plugin/schema";
+
+import { TK_VERSION } from "../constants";
 import { fs } from "../utils/fastfs";
 import { decodeXMLNodeIntoInstance } from "./decoder";
 

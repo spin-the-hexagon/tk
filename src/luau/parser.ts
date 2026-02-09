@@ -1,7 +1,9 @@
 import { $ } from "bun";
+
 import type { Cache } from "../compiler/cache";
-import { action } from "../scheduler/action";
 import type { Luau } from "./ast";
+
+import { action } from "../scheduler/action";
 import { downloadLuau } from "./download";
 
 async function _parseLuauDocument(source: string, cache: Cache): Promise<Luau.Document> {

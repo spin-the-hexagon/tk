@@ -3,9 +3,11 @@ import { command, positional, string } from "cmd-ts";
 import { basename, resolve } from "node:path";
 import TOML from "smol-toml";
 import { type InferOutput } from "valibot";
+
+import type { ConfigSchema } from "../config/schema";
+
 import { fatalError } from "../cli/fatal-error";
 import { createPrinter } from "../cli/printer";
-import type { ConfigSchema } from "../config/schema";
 
 export const init = command({
 	args: {

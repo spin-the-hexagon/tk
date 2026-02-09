@@ -2,8 +2,10 @@ import extract from "extract-zip";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { platform } from "node:process";
-import { debug } from "../cli/logger";
+
 import type { Cache } from "../compiler/cache";
+
+import { debug } from "../cli/logger";
 import { action } from "../scheduler/action";
 
 export function getLuauDownloadURL() {

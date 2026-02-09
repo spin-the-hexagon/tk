@@ -1,14 +1,16 @@
 import { resolveSync } from "bun";
 import { join } from "node:path";
 import { parse } from "oxc-parser";
-import { warn } from "../cli/logger";
+
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry } from "../compiler/scan-files";
-import { TK_VERSION } from "../constants";
 import type { Luau } from "../luau/ast";
-import { lu } from "../luau/construction-utilities";
 import type { Analysis } from "../plugin/analysis";
 import type { PluginMetadata, PluginTransformProps, PluginTransformResult } from "../plugin/schema";
+
+import { warn } from "../cli/logger";
+import { TK_VERSION } from "../constants";
+import { lu } from "../luau/construction-utilities";
 import { fs } from "../utils/fastfs";
 import { TypescriptTranspiler } from "./transpiler";
 

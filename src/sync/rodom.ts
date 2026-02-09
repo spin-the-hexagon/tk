@@ -1,12 +1,39 @@
 import type { BundledItem } from "../compiler/dev-server";
-import { serviceNames } from "../utils/datamodel";
 import type { BlobEntry } from "./codec";
+
+import { serviceNames } from "../utils/datamodel";
 
 export class Instance {
 	className = "Folder";
 	name = "Instance";
-	children: Instance[] = [];
+	private _children: Instance[] = [];
 	data: Record<string, any> = {};
+	private _parent?: Instance;
+
+	get children() {
+		return this._children;
+	}
+	set children(value) {
+		this._children = value;
+		this.updateChildren();
+	}
+
+	get parent() {
+		return this._parent;
+	}
+	set parent(value) {
+		if (this._parent) {
+			this._parent._children = this._parent._children.filter(x => x !== this);
+		}
+		value?.children.push(this);
+		value?.updateChildren();
+	}
+
+	updateChildren() {
+		for (const child of this.children) {
+			child._parent = this;
+		}
+	}
 
 	inferClass() {
 		if (["DataModel", ...serviceNames].includes(this.name)) {
@@ -47,6 +74,7 @@ export class Instance {
 		}
 
 		for (const key in this.data) {
+			if (key === "Name") continue;
 			blobs.push({
 				type: "attribute",
 				key,

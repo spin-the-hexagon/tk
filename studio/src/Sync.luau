@@ -58,11 +58,12 @@ function module.find_from_path(path: { string }): Instance?
 end
 
 function module.set_key(object: Instance, key: string, value: any): ()
-	local current, err = pcall(function()
+	local success, current = pcall(function()
 		return (object :: any)[key]
 	end)
 
-	if err then
+	if not success then
+		print(object, current)
 		return
 	end
 
@@ -79,6 +80,10 @@ function module.set_key(object: Instance, key: string, value: any): ()
 
 	if typeof(current) == "Vector3" then
 		real_value = Vector3.new(value.X, value.Y, value.Z)
+	end
+
+	if typeof(current) == "Content" and typeof(real_value) == "string" then
+		real_value = Content.fromUri(real_value)
 	end
 
 	if typeof(current) == "Color3" and typeof(real_value) == "number" then
@@ -118,7 +123,9 @@ function module.set_key(object: Instance, key: string, value: any): ()
 		end
 	end
 
-	(object :: any)[key] = real_value
+	pcall(function()
+		(object :: any)[key] = real_value
+	end)
 end
 
 function module.push_blob_unto_datamodel(blob: { Codecs.BlobEntry })

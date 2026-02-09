@@ -5,5 +5,4 @@
 
 [tools]
 luau = "luau-lang/luau@0.697.0"
-lute = "luau-lang/lute@0.1.0-nightly.20251028"
 wally = "UpliftGames/wally@0.3.2"

@@ -1,7 +1,10 @@
 import * as v from "valibot";
+
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry, ModelFileEntry } from "../compiler/scan-files";
+import type { Config } from "../config/schema";
 import type { Luau } from "../luau/ast";
+import type { AssetCollection } from "../roblox/assets";
 import type { Instance } from "../sync/rodom";
 import type { Analysis } from "./analysis";
 
@@ -29,6 +32,8 @@ export interface PluginTransformProps {
 
 export interface PluginTransformModelProps {
 	model: ModelFileEntry;
+	config: Config;
+	assets: AssetCollection;
 	cache: Cache;
 }
 

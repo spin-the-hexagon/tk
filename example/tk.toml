@@ -15,3 +15,5 @@ roblox = "game.ServerScriptService.src"
 
 [experimental]
 rbxmx=true
+media=true
+models=true

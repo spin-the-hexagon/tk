@@ -1,4 +1,5 @@
 import * as v from "valibot";
+
 import type { Luau } from "../luau/ast";
 
 export const ImportInfoSchema = v.union([

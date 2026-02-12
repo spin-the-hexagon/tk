@@ -1,13 +1,13 @@
 import chalk, { type ChalkInstance } from "chalk";
 
-import { showBlockCompletedLine, showSchedulerBlockState } from "../cli/logger";
 import { unreachable } from "../utils/unreachable";
+import { currentTasks, startReactApp, status, store } from "../ui/react";
 
 export interface SchedulerBlock {
 	tasks: SchedulerTask[];
 	add(task: SchedulerTask): void;
 	process(): Promise<void>;
-	failed?: boolean;
+	failed?: any;
 	done: boolean;
 	begun: number;
 }
@@ -40,6 +40,7 @@ export interface SchedulerTask {
 	typeId: string;
 	done: boolean;
 	timeTaken: number;
+	description: string;
 }
 
 export type SchedulerPhase = "download" | "index" | "parse" | "mark" | "build" | "commit";
@@ -103,7 +104,7 @@ export function block(): SchedulerBlock {
 		begun: 0,
 		tasks: [],
 		async process() {
-			let lastUpdateTime = 0;
+			pushSchedulerBlockStatus(this);
 
 			outer: while (true) {
 				const tasks = this.tasks
@@ -136,18 +137,13 @@ export function block(): SchedulerBlock {
 					break;
 				}
 
-				const now = performance.now();
-
-				if (now > lastUpdateTime + 10) {
-					showSchedulerBlockState(this);
-					lastUpdateTime = now;
-				}
+				store.set(currentTasks, [...tasks]);
 
 				await waitForEventLoop();
 			}
 
 			this.done = true;
-			showBlockCompletedLine(this);
+			pushSchedulerBlockStatus(this);
 			beginNewBlock();
 		},
 		done: false,
@@ -161,6 +157,7 @@ export function block(): SchedulerBlock {
 }
 
 export async function startRunLoop() {
+	startReactApp();
 	while (true) {
 		await waitForEventLoop();
 		const block = getCurrentBlock();
@@ -193,11 +190,13 @@ export function schedulePromise<T>({
 	phase,
 	impl,
 	typeId,
+	description,
 }: {
 	name: string;
 	phase: SchedulerPhase;
 	typeId: string;
 	impl: () => Promise<T>;
+	description: string;
 }): Promise<T> {
 	const { promise, resolve, reject } = Promise.withResolvers<T>();
 
@@ -213,7 +212,18 @@ export function schedulePromise<T>({
 				reject(err);
 			}
 		},
+		description,
 	});
 
 	return promise;
+}
+
+export function pushSchedulerBlockStatus(block: SchedulerBlock) {
+	if (block.failed) {
+		store.set(status, ["error", block.failed]);
+	} else if (block.done) {
+		store.set(status, "success");
+	} else {
+		store.set(status, "pending");
+	}
 }

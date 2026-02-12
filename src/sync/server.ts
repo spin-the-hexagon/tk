@@ -1,7 +1,5 @@
 import type { WSContext, WSEvents } from "hono/ws";
 
-import chalk from "chalk";
-import figlet from "figlet";
 import { Hono, type Context } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import { poweredBy } from "hono/powered-by";
@@ -36,15 +34,15 @@ function generateCode() {
 }
 
 export async function showCode(code: string) {
-	const text = [
-		chalk.blue(await figlet(code, "univers")),
-		"",
-		chalk.blue("Above this message is the code to sync this project to Roblox Studio."),
-		chalk.blue(`Copy-pasting ${chalk.italic.italic("weaklings")} may copy the following: ${code}`),
-		chalk.red("Don't share this code with anybody you don't trust."),
-	].join("\n");
+	// const text = [
+	// 	chalk.blue(await figlet(code, "univers")),
+	// 	"",
+	// 	chalk.blue("Above this message is the code to sync this project to Roblox Studio."),
+	// 	chalk.blue(`Copy-pasting ${chalk.italic.italic("weaklings")} may copy the following: ${code}`),
+	// 	chalk.red("Don't share this code with anybody you don't trust."),
+	// ].join("\n");
 
-	info(text);
+	info(code);
 }
 
 function context(ws: WSContext<WebSocketShellContext>): WebSocketContext {
@@ -89,11 +87,14 @@ export class SyncServer {
 			upgradeWebSocket(it => this.createWebsocketHandler(it)),
 		);
 
-		Bun.serve({
+		const server = Bun.serve({
 			port: 1114,
 			fetch: this.hono.fetch,
 			websocket,
 		});
+
+		this.devServer.url = server.url.toString();
+		this.devServer.updateUIState();
 	}
 
 	message(ws: WSContext<WebSocketShellContext>, message: v.InferOutput<typeof S2CSyncMessage>) {
@@ -130,7 +131,8 @@ export class SyncServer {
 					.with({ type: "proceed_auth" }, message => {
 						if (message.requestedMode === "code_input") {
 							context(ws).phase = message.requestedMode;
-							showCode(context(ws).code);
+							self.devServer.password = context(ws).code;
+							self.devServer.updateUIState();
 						}
 						self.sendPhase(ws);
 					})

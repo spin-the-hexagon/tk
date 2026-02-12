@@ -35,6 +35,7 @@ export function downloadReflectionDatabase(cache: Cache) {
 	return action({
 		name: "Download reflection database",
 		id: "rbxmx:reflection_db_download",
+		description: "Downloading the names that map XML keys into Roblox Studio keys",
 		cache,
 		forceCache: true,
 		args: [reflectionDatabaseUrl],

@@ -13,10 +13,11 @@ import { pluginRBXMX } from "../rbxmx/plugin";
 import { AssetCollection } from "../roblox/assets";
 import { action } from "../scheduler/action";
 import { printProfileReadout } from "../scheduler/profiler";
-import { getCurrentBlock, wait } from "../scheduler/scheduler";
+import { getCurrentBlock, pushSchedulerBlockStatus, wait } from "../scheduler/scheduler";
 import { Instance } from "../sync/rodom";
 import { SyncServer } from "../sync/server";
 import { pluginTypescript } from "../typescript/plugin";
+import { serverState, store } from "../ui/react";
 import { fs } from "../utils/fastfs";
 import { createSourcemapFromFiles } from "../utils/rojo-sourcemaps";
 import { codeStringToRawText } from "../utils/sourcemap";
@@ -48,6 +49,8 @@ export class DevServer {
 	server?: SyncServer;
 	profiles: string[] = [];
 	assets: AssetCollection;
+	password = "??????";
+	url = "";
 
 	constructor(opts: { path: string; config: Config }) {
 		for (const portal of opts.config.portals) {
@@ -97,6 +100,13 @@ export class DevServer {
 		await this.cache.loadFromFS();
 	}
 
+	updateUIState() {
+		store.set(serverState, {
+			password: this.password,
+			url: "localhost:1114",
+		});
+	}
+
 	async updateLoop() {
 		await this.init();
 		while (true) {
@@ -108,6 +118,7 @@ export class DevServer {
 					await action({
 						id: "dev:build",
 						name: "Build",
+						description: "Turning your code into a form that I can more easily work with",
 						args: [],
 						impl() {
 							return self.update();
@@ -116,7 +127,8 @@ export class DevServer {
 					});
 				} catch (err) {
 					nfError(err);
-					getCurrentBlock().failed = true;
+					getCurrentBlock().failed = err;
+					pushSchedulerBlockStatus(getCurrentBlock());
 				}
 			}
 		}

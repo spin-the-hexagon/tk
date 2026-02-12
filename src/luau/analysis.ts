@@ -176,6 +176,7 @@ export async function analyzeImports(source: string, path: string, cache: Cache)
 	return action({
 		id: "luau:analyze_imports",
 		name: "Analyze file imports",
+		description: "Figuring out which other scripts your scripts depend on.",
 		phase: "mark",
 		args: [source],
 		cache,

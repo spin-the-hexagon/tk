@@ -5,6 +5,7 @@ import { schedulePromise, type SchedulerPhase } from "./scheduler";
 export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 	name: string;
 	id: string;
+	description: string;
 	args: ArgsType;
 	cache?: Cache;
 	forceCache?: boolean;
@@ -29,6 +30,7 @@ export async function action<PromiseType, ArgsType extends unknown[]>(props: {
 	return await schedulePromise({
 		name: props.name,
 		phase: props.phase,
+		description: props.description,
 		async impl() {
 			const result = await props.impl(...props.args);
 			if (props.cache) {

@@ -5,7 +5,6 @@ import { platform } from "node:process";
 
 import type { Cache } from "../compiler/cache";
 
-import { debug } from "../cli/logger";
 import { action } from "../scheduler/action";
 
 export function getLuauDownloadURL() {
@@ -19,6 +18,7 @@ export async function downloadLuau(cache: Cache): Promise<string> {
 	return action({
 		name: "Download Luau",
 		id: "luau:download",
+		description: "Downloading a copy of Roblox's programming language so I can understand your code.",
 		args: [url],
 		cache,
 		async impl(): Promise<string> {

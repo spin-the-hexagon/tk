@@ -22,6 +22,7 @@ import tkpack from "./tkpack.lib.luau" with { type: "text" };
 function printAst(node: Luau.BlockStatement, fileName: string, cache: Cache) {
 	return action({
 		name: "Print AST",
+		description: "Converting my internal representation of your code into text.",
 		id: "bundler:print_ast",
 		args: [node, fileName] as const,
 		phase: "build",
@@ -100,6 +101,7 @@ export class Bundle {
 		await action({
 			name: "Sweep bundle",
 			id: "bundle:sweep",
+			description: "Finding what files I need to include in the final version of your code.",
 			args: [],
 			phase: "mark",
 			async impl() {
@@ -212,6 +214,7 @@ export class Bundle {
 		const str = await action({
 			name: "Generate bundle text",
 			id: "bundle:generate_text",
+			description: "Turning all your files into one script.",
 			args: [],
 			impl() {
 				return self._generateText();

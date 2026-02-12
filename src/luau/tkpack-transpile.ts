@@ -146,6 +146,7 @@ export async function transpileToTKPack({
 	return await action({
 		name: `Transpile ${pathDM.join(".")} to TKPack`,
 		id: "tkpack:transpile",
+		description: "Turning your code into a format that lets it work when I combine it all into one file.",
 		args: [{ ast, pathDM, filePath }],
 		phase: "parse",
 		cache,

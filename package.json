@@ -1,6 +1,6 @@
 {
 	"name": "@spin-the-hexagon/tk",
-	"module": "src/index.ts",
+	"module": "core/index.ts",
 	"type": "module",
 	"private": true,
 	"version": "0.2.0",
@@ -14,18 +14,18 @@
 		"typescript": "^5"
 	},
 	"scripts": {
-		"start": "bun run ./src/index.ts",
-		"fmt": "oxfmt . && stylua src/ studio/ && cd native && cargo fmt && cd ../",
+		"start": "bun run ./core/index.ts",
+		"fmt": "oxfmt . && stylua core/ plugins/ studio/ && cd native && cargo fmt && cd ../",
 		"change": "bun run --bun changeset",
 		"version": "bun run --bun changeset version",
-		"make-natives-linux": "bun build-rust-natives && bun build --compile --target=bun-linux-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",
-		"make-natives-macos": "bun build-rust-natives && bun build --compile --target=bun-darwin-arm64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-macos-aarch64.zip ./release/tk -m",
-		"make-natives-windows": "bun build-rust-natives && bun build --compile --target=bun-windows-x64-modern ./src/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
+		"make-natives-linux": "bun build-rust-natives && bun build --compile --target=bun-linux-x64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",
+		"make-natives-macos": "bun build-rust-natives && bun build --compile --target=bun-darwin-arm64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-macos-aarch64.zip ./release/tk -m",
+		"make-natives-windows": "bun build-rust-natives && bun build --compile --target=bun-windows-x64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
 		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
 		"build-rust-natives": "cd native && cargo build",
-		"dev": "bun run --watch ./src/index.ts dev ./example --no-cache",
-		"dev-ts": "bun run --watch ./src/index.ts dev ./example-ts --no-cache",
-		"plugin:dev": "bun run --watch --inspect ./src/index.ts dev ./studio --no-cache"
+		"dev": "bun run --watch ./core/index.ts dev ./example --no-cache",
+		"dev-ts": "bun run --watch ./core/index.ts dev ./example-ts --no-cache",
+		"plugin:dev": "bun run --watch --inspect ./core/index.ts dev ./studio --no-cache"
 	},
 	"dependencies": {
 		"@johnnymorganz/stylua-bin": "^2.3.1",

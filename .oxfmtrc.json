@@ -3,5 +3,13 @@
 	"useTabs": true,
 	"experimentalSortImports": {},
 	"printWidth": 120,
-	"arrowParens": "avoid"
+	"arrowParens": "avoid",
+	"sortImports": {
+		"groups": [
+			["type-import", "type-internal", "type-parent", "type-sibling"],
+			["value-internal", "value-parent", "value-sibling", "value-index"],
+			["value-builtin", "value-external"],
+			"unknown"
+		]
+	}
 }

@@ -25,5 +25,10 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false,
+
+		"paths": {
+			"@core/*": ["./core/*"],
+			"@plugins/*": ["./plugins/*"],
+		},
 	},
 }

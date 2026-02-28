@@ -14,6 +14,7 @@ use eyre::Result;
 use windows::Win32::Security::Credentials::{
     CRED_FLAGS_REQUIRE_CONFIRMATION, CRED_TYPE_GENERIC, CREDENTIALW, CredReadW,
 };
+#[cfg(windows)]
 use windows::core::HSTRING;
 
 #[cfg(windows)]

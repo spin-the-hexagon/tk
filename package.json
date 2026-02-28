@@ -21,7 +21,7 @@
 		"make-natives-linux": "bun build-rust-natives && bun build --compile --target=bun-linux-x64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-linux-x86_64.zip ./release/tk -m",
 		"make-natives-macos": "bun build-rust-natives && bun build --compile --target=bun-darwin-arm64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-macos-aarch64.zip ./release/tk -m",
 		"make-natives-windows": "bun build-rust-natives && bun build --compile --target=bun-windows-x64-modern ./core/index.ts --outfile ./release/tk && zip ./release/tk-windows-x86_64.zip ./release/tk.exe -m",
-		"make-natives": "bun make-natives-linux && bun make-natives-windows && bun make-natives-macos",
+		"make-natives": "bun make-natives-windows",
 		"build-rust-natives": "cd native && cargo build",
 		"dev": "bun run --watch ./core/index.ts dev ./example --no-cache",
 		"dev-ts": "bun run --watch ./core/index.ts dev ./example-ts --no-cache",

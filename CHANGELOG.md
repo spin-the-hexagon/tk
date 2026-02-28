@@ -1,5 +1,11 @@
 # @spin-the-hexagon/tk
 
+## 0.3.0
+
+### Minor Changes
+
+- 2/27 re-release
+
 ## 0.2.0
 
 ### Minor Changes

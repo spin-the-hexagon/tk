@@ -50,7 +50,7 @@ export function pluginLuau(): PluginMetadata {
 		},
 		async transform(props) {
 			return {
-				ast: await parseLuauDocument(props.src, props.cache),
+				ast: await parseLuauDocument(props.src, props.context.cache()),
 			};
 		},
 	};

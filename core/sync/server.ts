@@ -1,12 +1,11 @@
+import type { Context } from "@core/context";
 import type { WSContext, WSEvents } from "hono/ws";
 
-import { Hono, type Context } from "hono";
+import { Hono, type Context as HonoContext } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import { poweredBy } from "hono/powered-by";
 import { match } from "ts-pattern";
 import * as v from "valibot";
-
-import type { DevServer } from "../compiler/dev-server";
 
 import { debug, info } from "../cli/logger";
 import { C2SSyncMessage, type BlobEntry, type S2CSyncMessage } from "./codec";
@@ -58,7 +57,7 @@ function context(ws: WSContext<WebSocketShellContext>): WebSocketContext {
 
 export class SyncServer {
 	hono = new Hono();
-	devServer: DevServer;
+	context: Context;
 	currentBlob: BlobEntry[] = [];
 	websockets: WSContext<WebSocketShellContext>[] = [];
 
@@ -78,8 +77,8 @@ export class SyncServer {
 		}
 	}
 
-	constructor(devServer: DevServer) {
-		this.devServer = devServer;
+	constructor(context: Context) {
+		this.context = context;
 
 		this.hono.get(
 			"/sync",
@@ -93,8 +92,8 @@ export class SyncServer {
 			websocket,
 		});
 
-		this.devServer.url = server.url.toString();
-		this.devServer.updateUIState();
+		this.context.devServer().url = server.url.toString();
+		this.context.devServer().updateUIState();
 	}
 
 	message(ws: WSContext<WebSocketShellContext>, message: v.InferOutput<typeof S2CSyncMessage>) {
@@ -107,11 +106,11 @@ export class SyncServer {
 		this.message(ws, {
 			type: "set_auth",
 			mode: phase,
-			projectId: this.devServer.config.name,
+			projectId: this.context.config().name,
 		});
 	}
 
-	createWebsocketHandler(ctx: Context): WSEvents<WebSocketShellContext> {
+	createWebsocketHandler(ctx: HonoContext): WSEvents<WebSocketShellContext> {
 		const self = this;
 
 		return {
@@ -131,8 +130,8 @@ export class SyncServer {
 					.with({ type: "proceed_auth" }, message => {
 						if (message.requestedMode === "code_input") {
 							context(ws).phase = message.requestedMode;
-							self.devServer.password = context(ws).code;
-							self.devServer.updateUIState();
+							self.context.devServer().password = context(ws).code;
+							self.context.devServer().updateUIState();
 						}
 						self.sendPhase(ws);
 					})

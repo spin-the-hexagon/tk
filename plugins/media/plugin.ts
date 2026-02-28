@@ -26,7 +26,7 @@ export function pluginMedia(): PluginMetadata {
 		async transpileModel(props) {
 			const src = await fs.read(props.model.path);
 
-			const { id } = await props.assets.getAsset({
+			const { id } = await props.context.assets().getAsset({
 				data: src,
 				fileName: props.model.path,
 				type: "Image",

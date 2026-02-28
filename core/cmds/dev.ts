@@ -1,9 +1,9 @@
+import { buildContext } from "@core/context";
 import chalk from "chalk";
 import { command, flag, optional, positional } from "cmd-ts";
 import { Directory } from "cmd-ts/batteries/fs";
 import { resolve } from "node:path";
 
-import { DevServer } from "../compiler/dev-server";
 import { loadConfig } from "../config/loader";
 import { startRunLoop } from "../scheduler/scheduler";
 
@@ -38,9 +38,8 @@ export const dev = command({
 
 		startRunLoop();
 
-		const devServer = new DevServer({
-			path: realPath,
-			config,
-		});
+		const context = buildContext(config, path!);
+
+		context.devServer();
 	},
 });

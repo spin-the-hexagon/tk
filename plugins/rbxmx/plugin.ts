@@ -31,7 +31,7 @@ export function pluginRBXMX(): PluginMetadata {
 				throw new Error("RBXMX file has no root item");
 			}
 
-			return await decodeXMLNodeIntoInstance(props.cache, root);
+			return await decodeXMLNodeIntoInstance(props.context.cache(), root);
 		},
 	};
 }

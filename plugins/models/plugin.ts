@@ -117,7 +117,7 @@ export function pluginModels(): PluginMetadata {
 			const data = await loader.parseAsync(buffer, props.model.path);
 			const scene = data.scene;
 
-			return await convertThreeObject(scene, props.assets);
+			return await convertThreeObject(scene, props.context.assets());
 		},
 	};
 }

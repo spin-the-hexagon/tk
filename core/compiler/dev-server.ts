@@ -1,13 +1,8 @@
-import { pluginLuau } from "@plugins/luau/plugin";
-import { pluginMedia } from "@plugins/media/plugin";
-import { pluginModels } from "@plugins/models/plugin";
-import { pluginRBXMX } from "@plugins/rbxmx/plugin";
+import type { Context } from "@core/context";
+
 import { AssetCollection } from "@plugins/roblox/assets";
-import { pluginTypescript } from "@plugins/typescript/plugin";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-
-import type { Config } from "../config/schema";
 
 import { nfError, warn } from "../cli/logger";
 import { isExperimentEnabled } from "../config/utils";
@@ -16,14 +11,12 @@ import { action } from "../scheduler/action";
 import { printProfileReadout } from "../scheduler/profiler";
 import { getCurrentBlock, pushSchedulerBlockStatus, wait } from "../scheduler/scheduler";
 import { Instance } from "../sync/rodom";
-import { SyncServer } from "../sync/server";
 import { serverState, store } from "../ui/react";
 import { fs } from "../utils/fastfs";
 import { createSourcemapFromFiles } from "../utils/rojo-sourcemaps";
 import { codeStringToRawText } from "../utils/sourcemap";
 import { TODO } from "../utils/todo";
 import { Bundle } from "./bundle";
-import { Cache, cacheFileName } from "./cache";
 import { scanFiles, type CodeFileEntry, type FileEntry } from "./scan-files";
 
 export type BundledItem =
@@ -41,63 +34,36 @@ export type BundledItem =
 	  };
 
 export class DevServer {
-	path: string;
-	config: Config;
 	isUpdateQueued = false;
-	cache: Cache;
 	plugins: PluginMetadata[] = [];
-	server?: SyncServer;
+	context: Context;
 	profiles: string[] = [];
 	assets: AssetCollection;
 	password = "??????";
 	url = "";
 
-	constructor(opts: { path: string; config: Config }) {
-		for (const portal of opts.config.portals) {
-			fs.addWatchPath(resolve(opts.path, portal.project));
+	constructor(context: Context) {
+		this.context = context;
+
+		for (const portal of context.config().portals) {
+			fs.addWatchPath(resolve(context.path(), portal.project));
 		}
 		fs.addOnUpdate(() => {
 			this.isUpdateQueued = true;
 		});
 
-		if (opts.config.type !== "plugin") {
-			this.server = new SyncServer(this);
-		}
-
-		this.path = resolve(opts.path);
-		this.config = opts.config;
-
 		this.isUpdateQueued = true;
-
-		this.cache = new Cache(resolve(this.path, cacheFileName));
 
 		this.updateLoop();
 
-		this.plugins.push(pluginLuau());
-		if (isExperimentEnabled(this.config, "rbxmx")) {
-			this.plugins.push(pluginRBXMX());
-		}
-
-		if (isExperimentEnabled(this.config, "typescript")) {
-			this.plugins.push(pluginTypescript());
-		}
-
-		if (isExperimentEnabled(this.config, "models")) {
-			this.plugins.push(pluginModels());
-		}
-
-		if (isExperimentEnabled(this.config, "media")) {
-			this.plugins.push(pluginMedia());
-		}
-
 		this.assets = new AssetCollection({
-			config: this.config,
-			projectPath: this.path,
+			config: this.context.config(),
+			projectPath: this.context.path(),
 		});
 	}
 
 	async init() {
-		await this.cache.loadFromFS();
+		await this.context.cache().loadFromFS();
 	}
 
 	updateUIState() {
@@ -137,10 +103,10 @@ export class DevServer {
 	async scanFiles() {
 		const index: Promise<FileEntry[]>[] = [];
 
-		for (const portal of this.config.portals ?? []) {
+		for (const portal of this.context.config().portals ?? []) {
 			index.push(
 				scanFiles({
-					path: resolve(this.path, portal.project),
+					path: resolve(this.context.path(), portal.project),
 					robloxPath: portal.roblox.split("."),
 					plugins: this.plugins,
 					external: portal.external,
@@ -158,7 +124,9 @@ export class DevServer {
 
 		const entrypoints = entries.filter(x => x.type === "code" && x.mode !== "module") as CodeFileEntry[];
 
-		if (this.config.type === "plugin") {
+		const cfg = this.context.config();
+
+		if (cfg.type === "plugin") {
 			if (entrypoints.length > 0) {
 				warn(
 					`Plugins cannot have client or server scripts, thus the files ${entrypoints.map(x => basename(x.path)).join(", ")} are being ignored.`,
@@ -167,13 +135,15 @@ export class DevServer {
 
 			entrypoints.splice(0);
 
-			const entryPath = this.config.entry;
-			const entry = entries.find(x => x.path === resolve(this.path, entryPath) && x.type === "code") as
+			const entryPath = cfg.entry;
+			const entry = entries.find(x => x.path === resolve(this.context.path(), entryPath) && x.type === "code") as
 				| CodeFileEntry
 				| undefined;
 
 			if (!entry) {
-				warn(`Failed to find a file with path ${resolve(this.path, entryPath)}, thus there is no entrypoint`);
+				warn(
+					`Failed to find a file with path ${resolve(this.context.path(), entryPath)}, thus there is no entrypoint`,
+				);
 			} else {
 				entrypoints.push(entry);
 			}
@@ -183,10 +153,9 @@ export class DevServer {
 
 		for (const entry of entrypoints) {
 			const bundle = new Bundle({
-				cache: this.cache,
+				context: this.context,
 				allEntries: entries,
 				files: [entry],
-				plugins: this.plugins,
 				entrypoints: [entry],
 			});
 
@@ -209,9 +178,7 @@ export class DevServer {
 
 			const result = await plugin.transpileModel!({
 				model: file,
-				cache: this.cache,
-				config: this.config,
-				assets: this.assets,
+				context: this.context,
 			});
 
 			bundles.push({
@@ -222,7 +189,7 @@ export class DevServer {
 			});
 		}
 
-		if (this.config.type === "plugin") {
+		if (this.context.config().type === "plugin") {
 			await this.savePlugin(bundles);
 		} else {
 			await this.pushGame(bundles);
@@ -230,17 +197,17 @@ export class DevServer {
 
 		// Update sourcemap
 		const sourcemap = createSourcemapFromFiles({
-			config: this.config,
+			config: this.context.config(),
 			files: entries,
-			projectPath: this.path,
+			projectPath: this.context.path(),
 		});
 
-		Bun.write(resolve(this.path, "sourcemap.json"), JSON.stringify(sourcemap));
+		Bun.write(resolve(this.context.path(), "sourcemap.json"), JSON.stringify(sourcemap));
 
-		if (isExperimentEnabled(this.config, "profiling")) {
+		if (isExperimentEnabled(this.context.config(), "profiling")) {
 			this.profiles.push(printProfileReadout(getCurrentBlock()));
 
-			await Bun.write(resolve(this.path, ".tk", "profile.log"), this.profiles.join("\n\n\n"));
+			await Bun.write(resolve(this.context.path(), ".tk", "profile.log"), this.profiles.join("\n\n\n"));
 		}
 	}
 
@@ -253,7 +220,7 @@ export class DevServer {
 
 		const blobs = domRoot.asBlobEntries([]);
 
-		this.server?.setCurrentBlob(blobs);
+		this.context.syncServer().setCurrentBlob(blobs);
 	}
 
 	async savePlugin(bundles: BundledItem[]) {
@@ -265,9 +232,16 @@ export class DevServer {
 		if (process.platform !== "win32") {
 			TODO(process.platform);
 		}
-		const robloxPath = join(homedir(), "AppData", "Local", "Roblox", "Plugins", `${this.config.name}.lua`);
+		const robloxPath = join(
+			homedir(),
+			"AppData",
+			"Local",
+			"Roblox",
+			"Plugins",
+			`${this.context.config().name}.lua`,
+		);
 
 		await Bun.write(robloxPath, src);
-		await Bun.write(resolve(this.path, "./test.luau"), src);
+		await Bun.write(resolve(this.context.path(), "./test.luau"), src);
 	}
 }

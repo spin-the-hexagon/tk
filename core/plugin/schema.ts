@@ -1,10 +1,10 @@
+import type { Context } from "@core/context";
+import type { Luau } from "@plugins/luau/ast";
+
 import * as v from "valibot";
 
-import type { Luau } from "../@plugins/luau/ast";
-import type { AssetCollection } from "../@plugins/roblox/assets";
 import type { Cache } from "../compiler/cache";
 import type { CodeFileEntry, ModelFileEntry } from "../compiler/scan-files";
-import type { Config } from "../config/schema";
 import type { Instance } from "../sync/rodom";
 import type { Analysis } from "./analysis";
 
@@ -27,14 +27,12 @@ export interface PluginTransformProps {
 	src: string;
 	path: string;
 	pathDatamodel: string[];
-	cache: Cache;
+	context: Context;
 }
 
 export interface PluginTransformModelProps {
 	model: ModelFileEntry;
-	config: Config;
-	assets: AssetCollection;
-	cache: Cache;
+	context: Context;
 }
 
 export interface PluginTransformResult {

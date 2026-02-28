@@ -1,3 +1,5 @@
+// @ts-ignore
+import type { Context } from "@core/context";
 import type { Luau } from "@plugins/luau/ast";
 
 import { integrateLuauPrinter } from "@plugins/luau/printer";
@@ -8,7 +10,7 @@ import { basename } from "node:path";
 import type { Cache } from "./cache";
 
 import { warn } from "../cli/logger";
-import { findPlugin, type PluginMetadata } from "../plugin/schema";
+import { findPlugin } from "../plugin/schema";
 import { action } from "../scheduler/action";
 import { waitForEventLoop } from "../scheduler/scheduler";
 import { CodePrinter } from "../utils/code-printer";
@@ -17,7 +19,6 @@ import { fs } from "../utils/fastfs";
 import { type CodeString } from "../utils/sourcemap";
 import { unreachable } from "../utils/unreachable";
 import { type CodeFileEntry, type FileEntry } from "./scan-files";
-// @ts-ignore
 import tkpack from "./tkpack.lib.luau" with { type: "text" };
 
 function printAst(node: Luau.BlockStatement, fileName: string, cache: Cache) {
@@ -45,19 +46,16 @@ function printAst(node: Luau.BlockStatement, fileName: string, cache: Cache) {
 export class Bundle {
 	files: CodeFileEntry[];
 	allEntries: FileEntry[];
-	plugins: PluginMetadata[];
-	cache: Cache;
 	entrypoints: CodeFileEntry[];
+	context: Context;
 
 	constructor(props: {
-		plugins: PluginMetadata[];
-		cache: Cache;
 		allEntries: FileEntry[];
 		files: CodeFileEntry[];
 		entrypoints: CodeFileEntry[];
+		context: Context;
 	}) {
-		this.plugins = props.plugins;
-		this.cache = props.cache;
+		this.context = props.context;
 		this.allEntries = props.allEntries;
 		this.files = props.files;
 		this.entrypoints = props.entrypoints;
@@ -110,8 +108,8 @@ export class Bundle {
 
 				while (p < self.files.length) {
 					const file = self.files[p]!;
-					const plugin = findPlugin(self.plugins, file.pluginId);
-					const analysis = await plugin.analyze!(file, self.cache);
+					const plugin = findPlugin(self.context.plugins(), file.pluginId);
+					const analysis = await plugin.analyze!(file, self.context.cache());
 
 					for (const imp of analysis.imports) {
 						if (imp.type === "classic") {
@@ -153,7 +151,7 @@ export class Bundle {
 
 		integrateLuauPrinter(cp);
 
-		const cache = this.cache;
+		const cache = this.context.cache();
 
 		for (const file of this.files) {
 			cp.comment(file.path);
@@ -162,7 +160,8 @@ export class Bundle {
 			// Step 1: Generate lua code with plugin (bleh)
 			let src = file.forceSrc ?? (await fs.readText(file.path));
 
-			const plugin = findPlugin(this.plugins, file.pluginId);
+			const plugin = findPlugin(this.context.plugins(), file.pluginId);
+			const self = this;
 
 			const { ast } = await action({
 				name: `Transpile ${basename(file.path)} with ${plugin.id}`,
@@ -183,7 +182,7 @@ export class Bundle {
 						path: file.path,
 						pathDatamodel: file.dataModelPath,
 						src,
-						cache,
+						context: self.context,
 					});
 				},
 			});
@@ -197,7 +196,7 @@ export class Bundle {
 				filePath: file.path,
 			});
 
-			cp.segments.push(...(await printAst(ast.root, file.path, this.cache)));
+			cp.segments.push(...(await printAst(ast.root, file.path, cache)));
 
 			cp.add("end)");
 
